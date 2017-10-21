@@ -1,0 +1,34 @@
+---
+
+- hosts: localhost
+  vars_files:
+    - secret/startup.vars.yml
+
+  tasks:
+    - name: get repository
+      git:
+        repo: "{{ repository_url }}"
+        dest: "/go/src/server"
+        version: "{{ repository_version }}"
+
+    - name: find templates
+      find:
+        paths: "/go/src/server"
+        patterns: "*.j2.go"
+        recurse: yes
+      register: templates
+
+    - name: fill teplates
+      template:
+        src: "{{ item.path }}"
+        dest: "{{ item.path | regex_replace('.j2.go', '.go') }}"
+      with_items:
+        - "{{ templates.files }}"
+
+    - name: remove templates
+      file:
+        state: absent
+        path: "{{ item }}"
+      with_items:
+        - "{{ templates.files }}"
+
