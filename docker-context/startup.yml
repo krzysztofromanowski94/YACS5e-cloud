@@ -10,6 +10,7 @@
         repo: "{{ repository_url }}"
         dest: "/go/src/server"
         version: "{{ repository_version }}"
+        update: yes
 
     - name: find templates
       find:
@@ -32,3 +33,7 @@
       with_items:
         - "{{ templates.files }}"
 
+    - name: include repository playbook
+      include: /root/"{{ item }}"
+      with_glob:
+        - *.yml

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+
+
+service YACS5e {
+    rpc Registration (stream Register) returns (stream Register);
+}
+
+message Register{
+    oneof regUnion {
+        bool valid = 1;
+    }
+}
+
