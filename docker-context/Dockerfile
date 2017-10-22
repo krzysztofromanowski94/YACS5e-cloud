@@ -6,11 +6,9 @@ RUN apk update && \
     apk add git && \
     apk add ansible
 
-# TODO add protoc
-
 WORKDIR /root
 
-VOLUME ["/root/vars"]
+VOLUME ["/root/secret"]
 
 EXPOSE 13334
 

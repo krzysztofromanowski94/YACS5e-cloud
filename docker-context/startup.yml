@@ -8,13 +8,14 @@
     - name: get repository
       git:
         repo: "{{ repository_url }}"
-        dest: "/go/src/server"
+        dest: "{{ repository_dir }}"
         version: "{{ repository_version }}"
         update: yes
+        force: yes
 
     - name: find templates
       find:
-        paths: "/go/src/server"
+        paths: "{{ repository_dir }}"
         patterns: "*.j2.go"
         recurse: yes
       register: templates
@@ -29,11 +30,10 @@
     - name: remove templates
       file:
         state: absent
-        path: "{{ item }}"
+        path: "{{ item.path }}"
       with_items:
         - "{{ templates.files }}"
 
-    - name: include repository playbook
-      include: /root/"{{ item }}"
-      with_glob:
-        - *.yml
+    - include: "{{ item }}"
+      with_fileglob:
+        - "{{ repository_dir }}/*.yml"
