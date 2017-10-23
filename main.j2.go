@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	pb "github.com/krzysztofromanowski94/YACS5e-cloud/proto"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"io"
+	"google.golang.org/grpc/status"
 	"log"
 	"net"
 	"strconv"
@@ -23,23 +23,24 @@ type YACS5eServer struct {
 }
 
 // rpc Registration (stream Register) returns (stream Register)
-func (server *YACS5eServer) Registration(stream pb.YACS5E_RegistrationServer) error {
-	for {
-		streamIn, err := stream.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			log.Println("Error in Registration Server stream in. ERROR: ", err)
-			return err
-		}
-		fmt.Println(streamIn)
-		err = stream.Send(&pb.Register{&pb.Register_Valid{true}})
-		if err != nil {
-			log.Println("Error in Registration Server stream out. ERROR: ", err)
-			return err
-		}
-	}
+// ERROR CODES:
+// 100: UNKNOWN ERROR
+// 101: INVALID LOGIN
+// 102: INVALID PASSWORD
+// 103: USER EXISTS
+func (server *YACS5eServer) Registration(ctx context.Context, user *pb.User) (*pb.Empty, error) {
+	log.Println("Registration Context: ", ctx)
+	return &pb.Empty{}, status.Errorf(0, "Got user: ", user.Login)
+}
+
+// ERROR CODES:
+// 110: UNKNOWN ERROR
+// 111: INVALID LOGIN
+// 112: INVALID PASSWORD
+// 113: USER EXISTS
+func (server *YACS5eServer) Login(ctx context.Context, user *pb.User) (*pb.Empty, error) {
+	log.Println("Login Context: ", ctx)
+	return &pb.Empty{}, status.Errorf(0, "User ", user.Login, " may exists. I don't know yet ;x")
 }
 
 func newServer() *YACS5eServer {

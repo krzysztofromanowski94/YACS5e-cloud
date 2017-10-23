@@ -8,7 +8,8 @@ It is generated from these files:
 	yacs5e.proto
 
 It has these top-level messages:
-	Register
+	User
+	Empty
 */
 package yacs5e
 
@@ -32,97 +33,41 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type Register struct {
-	// Types that are valid to be assigned to RegUnion:
-	//	*Register_Valid
-	RegUnion isRegister_RegUnion `protobuf_oneof:"regUnion"`
+type User struct {
+	Login    string `protobuf:"bytes,1,opt,name=login" json:"login,omitempty"`
+	Password string `protobuf:"bytes,2,opt,name=password" json:"password,omitempty"`
 }
 
-func (m *Register) Reset()                    { *m = Register{} }
-func (m *Register) String() string            { return proto.CompactTextString(m) }
-func (*Register) ProtoMessage()               {}
-func (*Register) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *User) Reset()                    { *m = User{} }
+func (m *User) String() string            { return proto.CompactTextString(m) }
+func (*User) ProtoMessage()               {}
+func (*User) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-type isRegister_RegUnion interface {
-	isRegister_RegUnion()
-}
-
-type Register_Valid struct {
-	Valid bool `protobuf:"varint,1,opt,name=valid,oneof"`
-}
-
-func (*Register_Valid) isRegister_RegUnion() {}
-
-func (m *Register) GetRegUnion() isRegister_RegUnion {
+func (m *User) GetLogin() string {
 	if m != nil {
-		return m.RegUnion
+		return m.Login
 	}
-	return nil
+	return ""
 }
 
-func (m *Register) GetValid() bool {
-	if x, ok := m.GetRegUnion().(*Register_Valid); ok {
-		return x.Valid
+func (m *User) GetPassword() string {
+	if m != nil {
+		return m.Password
 	}
-	return false
+	return ""
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*Register) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Register_OneofMarshaler, _Register_OneofUnmarshaler, _Register_OneofSizer, []interface{}{
-		(*Register_Valid)(nil),
-	}
+type Empty struct {
 }
 
-func _Register_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Register)
-	// regUnion
-	switch x := m.RegUnion.(type) {
-	case *Register_Valid:
-		t := uint64(0)
-		if x.Valid {
-			t = 1
-		}
-		b.EncodeVarint(1<<3 | proto.WireVarint)
-		b.EncodeVarint(t)
-	case nil:
-	default:
-		return fmt.Errorf("Register.RegUnion has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _Register_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Register)
-	switch tag {
-	case 1: // regUnion.valid
-		if wire != proto.WireVarint {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeVarint()
-		m.RegUnion = &Register_Valid{x != 0}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _Register_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Register)
-	// regUnion
-	switch x := m.RegUnion.(type) {
-	case *Register_Valid:
-		n += proto.SizeVarint(1<<3 | proto.WireVarint)
-		n += 1
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
-}
+func (m *Empty) Reset()                    { *m = Empty{} }
+func (m *Empty) String() string            { return proto.CompactTextString(m) }
+func (*Empty) ProtoMessage()               {}
+func (*Empty) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
 func init() {
-	proto.RegisterType((*Register)(nil), "Register")
+	proto.RegisterType((*User)(nil), "User")
+	proto.RegisterType((*Empty)(nil), "Empty")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -136,7 +81,18 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for YACS5E service
 
 type YACS5EClient interface {
-	Registration(ctx context.Context, opts ...grpc.CallOption) (YACS5E_RegistrationClient, error)
+	// ERROR CODES:
+	// 100: UNKNOWN ERROR
+	// 101: INVALID LOGIN
+	// 102: INVALID PASSWORD
+	// 103: USER EXISTS
+	Registration(ctx context.Context, in *User, opts ...grpc.CallOption) (*Empty, error)
+	// ERROR CODES:
+	// 110: UNKNOWN ERROR
+	// 111: INVALID LOGIN
+	// 112: INVALID PASSWORD
+	// 113: USER EXISTS
+	Login(ctx context.Context, in *User, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type yACS5EClient struct {
@@ -147,98 +103,109 @@ func NewYACS5EClient(cc *grpc.ClientConn) YACS5EClient {
 	return &yACS5EClient{cc}
 }
 
-func (c *yACS5EClient) Registration(ctx context.Context, opts ...grpc.CallOption) (YACS5E_RegistrationClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_YACS5E_serviceDesc.Streams[0], c.cc, "/YACS5e/Registration", opts...)
+func (c *yACS5EClient) Registration(ctx context.Context, in *User, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/YACS5e/Registration", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &yACS5ERegistrationClient{stream}
-	return x, nil
+	return out, nil
 }
 
-type YACS5E_RegistrationClient interface {
-	Send(*Register) error
-	Recv() (*Register, error)
-	grpc.ClientStream
-}
-
-type yACS5ERegistrationClient struct {
-	grpc.ClientStream
-}
-
-func (x *yACS5ERegistrationClient) Send(m *Register) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *yACS5ERegistrationClient) Recv() (*Register, error) {
-	m := new(Register)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
+func (c *yACS5EClient) Login(ctx context.Context, in *User, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/YACS5e/Login", in, out, c.cc, opts...)
+	if err != nil {
 		return nil, err
 	}
-	return m, nil
+	return out, nil
 }
 
 // Server API for YACS5E service
 
 type YACS5EServer interface {
-	Registration(YACS5E_RegistrationServer) error
+	// ERROR CODES:
+	// 100: UNKNOWN ERROR
+	// 101: INVALID LOGIN
+	// 102: INVALID PASSWORD
+	// 103: USER EXISTS
+	Registration(context.Context, *User) (*Empty, error)
+	// ERROR CODES:
+	// 110: UNKNOWN ERROR
+	// 111: INVALID LOGIN
+	// 112: INVALID PASSWORD
+	// 113: USER EXISTS
+	Login(context.Context, *User) (*Empty, error)
 }
 
 func RegisterYACS5EServer(s *grpc.Server, srv YACS5EServer) {
 	s.RegisterService(&_YACS5E_serviceDesc, srv)
 }
 
-func _YACS5E_Registration_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(YACS5EServer).Registration(&yACS5ERegistrationServer{stream})
-}
-
-type YACS5E_RegistrationServer interface {
-	Send(*Register) error
-	Recv() (*Register, error)
-	grpc.ServerStream
-}
-
-type yACS5ERegistrationServer struct {
-	grpc.ServerStream
-}
-
-func (x *yACS5ERegistrationServer) Send(m *Register) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *yACS5ERegistrationServer) Recv() (*Register, error) {
-	m := new(Register)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
+func _YACS5E_Registration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(User)
+	if err := dec(in); err != nil {
 		return nil, err
 	}
-	return m, nil
+	if interceptor == nil {
+		return srv.(YACS5EServer).Registration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/YACS5e/Registration",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(YACS5EServer).Registration(ctx, req.(*User))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _YACS5E_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(User)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(YACS5EServer).Login(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/YACS5e/Login",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(YACS5EServer).Login(ctx, req.(*User))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 var _YACS5E_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "YACS5e",
 	HandlerType: (*YACS5EServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams: []grpc.StreamDesc{
+	Methods: []grpc.MethodDesc{
 		{
-			StreamName:    "Registration",
-			Handler:       _YACS5E_Registration_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
+			MethodName: "Registration",
+			Handler:    _YACS5E_Registration_Handler,
+		},
+		{
+			MethodName: "Login",
+			Handler:    _YACS5E_Login_Handler,
 		},
 	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "yacs5e.proto",
 }
 
 func init() { proto.RegisterFile("yacs5e.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 121 bytes of a gzipped FileDescriptorProto
+	// 141 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xa9, 0x4c, 0x4c, 0x2e,
-	0x36, 0x4d, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x57, 0xd2, 0xe3, 0xe2, 0x08, 0x4a, 0x4d, 0xcf,
-	0x2c, 0x2e, 0x49, 0x2d, 0x12, 0x12, 0xe3, 0x62, 0x2d, 0x4b, 0xcc, 0xc9, 0x4c, 0x91, 0x60, 0x54,
-	0x60, 0xd4, 0xe0, 0xf0, 0x60, 0x08, 0x82, 0x70, 0x9d, 0xb8, 0xb8, 0x38, 0x8a, 0x52, 0xd3, 0x43,
-	0xf3, 0x32, 0xf3, 0xf3, 0x8c, 0x8c, 0xb8, 0xd8, 0x22, 0x1d, 0x9d, 0x83, 0x4d, 0x53, 0x85, 0x34,
-	0xb8, 0x78, 0x20, 0x3a, 0x8b, 0x12, 0x4b, 0x32, 0xf3, 0xf3, 0x84, 0x38, 0xf5, 0x60, 0x06, 0x49,
-	0x21, 0x98, 0x1a, 0x8c, 0x06, 0x8c, 0x49, 0x6c, 0x60, 0xab, 0x8c, 0x01, 0x01, 0x00, 0x00, 0xff,
-	0xff, 0x4e, 0xbf, 0x4d, 0x86, 0x7a, 0x00, 0x00, 0x00,
+	0x36, 0x4d, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x57, 0xb2, 0xe0, 0x62, 0x09, 0x2d, 0x4e, 0x2d,
+	0x12, 0x12, 0xe1, 0x62, 0xcd, 0xc9, 0x4f, 0xcf, 0xcc, 0x93, 0x60, 0x54, 0x60, 0xd4, 0xe0, 0x0c,
+	0x82, 0x70, 0x84, 0xa4, 0xb8, 0x38, 0x0a, 0x12, 0x8b, 0x8b, 0xcb, 0xf3, 0x8b, 0x52, 0x24, 0x98,
+	0xc0, 0x12, 0x70, 0xbe, 0x12, 0x3b, 0x17, 0xab, 0x6b, 0x6e, 0x41, 0x49, 0xa5, 0x91, 0x3d, 0x17,
+	0x5b, 0xa4, 0xa3, 0x73, 0xb0, 0x69, 0xaa, 0x90, 0x2c, 0x17, 0x4f, 0x50, 0x6a, 0x7a, 0x66, 0x71,
+	0x49, 0x51, 0x62, 0x49, 0x66, 0x7e, 0x9e, 0x10, 0xab, 0x1e, 0xc8, 0x6c, 0x29, 0x36, 0x3d, 0xb0,
+	0x42, 0x21, 0x31, 0x2e, 0x56, 0x1f, 0xb0, 0xb1, 0xa8, 0xe2, 0x49, 0x6c, 0x60, 0xa7, 0x18, 0x03,
+	0x02, 0x00, 0x00, 0xff, 0xff, 0x8c, 0xeb, 0x6c, 0x24, 0x9a, 0x00, 0x00, 0x00,
 }
