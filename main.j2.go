@@ -2,13 +2,14 @@ package main
 
 import (
 	pb "github.com/krzysztofromanowski94/YACS5e-cloud/proto"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/status"
 	"log"
 	"net"
+	"os"
+	"os/signal"
 	"strconv"
+	"time"
 )
 
 var (
@@ -17,38 +18,14 @@ var (
 	tlsKeyFile    = "{{ tls_key_file }}"
 	serverAddress = ":{{ server_port }}"
 	serverOpts    []grpc.ServerOption
+
+	exitProgramChannel chan bool      = make(chan bool, 1)
+	signalChannel      chan os.Signal = make(chan os.Signal, 1)
 )
 
-type YACS5eServer struct {
-}
-
-// rpc Registration (stream Register) returns (stream Register)
-// ERROR CODES:
-// 100: UNKNOWN ERROR
-// 101: INVALID LOGIN
-// 102: INVALID PASSWORD
-// 103: USER EXISTS
-func (server *YACS5eServer) Registration(ctx context.Context, user *pb.User) (*pb.Empty, error) {
-	log.Println("Registration Context: ", ctx)
-	return &pb.Empty{}, status.Errorf(0, "Got user: ", user.Login)
-}
-
-// ERROR CODES:
-// 110: UNKNOWN ERROR
-// 111: INVALID LOGIN
-// 112: INVALID PASSWORD
-// 113: USER EXISTS
-func (server *YACS5eServer) Login(ctx context.Context, user *pb.User) (*pb.Empty, error) {
-	log.Println("Login Context: ", ctx)
-	return &pb.Empty{}, status.Errorf(0, "User ", user.Login, " may exists. I don't know yet ;x")
-}
-
-func newServer() *YACS5eServer {
-	return new(YACS5eServer)
-
-}
-
 func main() {
+	log.Println("Server starting...")
+
 	if parseErr != nil {
 		log.Fatal("Error parsing use_tls ansible variable. ERROR:", parseErr)
 	}
@@ -67,5 +44,33 @@ func main() {
 
 	grpcServer := grpc.NewServer(serverOpts...)
 	pb.RegisterYACS5EServer(grpcServer, newServer())
-	grpcServer.Serve(lis)
+
+	go func() {
+		log.Println("Server Started")
+		grpcServer.Serve(lis)
+	}()
+
+	signal.Notify(signalChannel, os.Interrupt)
+
+	sig := <-signalChannel
+	log.Println("got stuff:")
+	log.Println(sig.String())
+	log.Println(sig)
+
+	time.Sleep(5 * time.Second)
+
+	<-exitProgramChannel
+	return
+}
+
+func init() {
+	//go func() {
+	//	for sig := range signalChannel {
+	//		log.Println("got stuff:")
+	//		sig.Signal()
+	//		log.Println(sig)
+	//		time.Sleep(5 * time.Second)
+	//	}
+	//}()
+
 }
