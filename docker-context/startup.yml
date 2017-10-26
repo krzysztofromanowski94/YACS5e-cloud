@@ -20,7 +20,7 @@
         recurse: yes
       register: templates
 
-    - name: fill teplates
+    - name: fill templates
       template:
         src: "{{ item.path }}"
         dest: "{{ item.path | regex_replace('.j2.go', '.go') }}"

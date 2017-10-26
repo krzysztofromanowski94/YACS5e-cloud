@@ -8,20 +8,20 @@ service YACS5e {
     // 101: INVALID LOGIN
     // 102: INVALID PASSWORD
     // 103: USER EXISTS
-    rpc Registration (User) returns (Empty);
+    rpc Registration (TUser) returns (Empty);
 
     // ERROR CODES:
     // 110: UNKNOWN ERROR
     // 111: INVALID LOGIN
     // 112: INVALID PASSWORD
     // 113: USER EXISTS
-    rpc Login (User) returns (Empty);
+    rpc Login (TUser) returns (Empty);
 }
 
-
-message User {
+message TUser {
     string login = 1;
     string password = 2;
+    string respToken = 3;
 }
 
 message Empty {

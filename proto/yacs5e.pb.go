@@ -8,7 +8,7 @@ It is generated from these files:
 	yacs5e.proto
 
 It has these top-level messages:
-	User
+	TUser
 	Empty
 */
 package yacs5e
@@ -33,26 +33,34 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type User struct {
-	Login    string `protobuf:"bytes,1,opt,name=login" json:"login,omitempty"`
-	Password string `protobuf:"bytes,2,opt,name=password" json:"password,omitempty"`
+type TUser struct {
+	Login     string `protobuf:"bytes,1,opt,name=login" json:"login,omitempty"`
+	Password  string `protobuf:"bytes,2,opt,name=password" json:"password,omitempty"`
+	RespToken string `protobuf:"bytes,3,opt,name=respToken" json:"respToken,omitempty"`
 }
 
-func (m *User) Reset()                    { *m = User{} }
-func (m *User) String() string            { return proto.CompactTextString(m) }
-func (*User) ProtoMessage()               {}
-func (*User) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *TUser) Reset()                    { *m = TUser{} }
+func (m *TUser) String() string            { return proto.CompactTextString(m) }
+func (*TUser) ProtoMessage()               {}
+func (*TUser) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-func (m *User) GetLogin() string {
+func (m *TUser) GetLogin() string {
 	if m != nil {
 		return m.Login
 	}
 	return ""
 }
 
-func (m *User) GetPassword() string {
+func (m *TUser) GetPassword() string {
 	if m != nil {
 		return m.Password
+	}
+	return ""
+}
+
+func (m *TUser) GetRespToken() string {
+	if m != nil {
+		return m.RespToken
 	}
 	return ""
 }
@@ -66,7 +74,7 @@ func (*Empty) ProtoMessage()               {}
 func (*Empty) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
 func init() {
-	proto.RegisterType((*User)(nil), "User")
+	proto.RegisterType((*TUser)(nil), "TUser")
 	proto.RegisterType((*Empty)(nil), "Empty")
 }
 
@@ -86,13 +94,13 @@ type YACS5EClient interface {
 	// 101: INVALID LOGIN
 	// 102: INVALID PASSWORD
 	// 103: USER EXISTS
-	Registration(ctx context.Context, in *User, opts ...grpc.CallOption) (*Empty, error)
+	Registration(ctx context.Context, in *TUser, opts ...grpc.CallOption) (*Empty, error)
 	// ERROR CODES:
 	// 110: UNKNOWN ERROR
 	// 111: INVALID LOGIN
 	// 112: INVALID PASSWORD
 	// 113: USER EXISTS
-	Login(ctx context.Context, in *User, opts ...grpc.CallOption) (*Empty, error)
+	Login(ctx context.Context, in *TUser, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type yACS5EClient struct {
@@ -103,7 +111,7 @@ func NewYACS5EClient(cc *grpc.ClientConn) YACS5EClient {
 	return &yACS5EClient{cc}
 }
 
-func (c *yACS5EClient) Registration(ctx context.Context, in *User, opts ...grpc.CallOption) (*Empty, error) {
+func (c *yACS5EClient) Registration(ctx context.Context, in *TUser, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
 	err := grpc.Invoke(ctx, "/YACS5e/Registration", in, out, c.cc, opts...)
 	if err != nil {
@@ -112,7 +120,7 @@ func (c *yACS5EClient) Registration(ctx context.Context, in *User, opts ...grpc.
 	return out, nil
 }
 
-func (c *yACS5EClient) Login(ctx context.Context, in *User, opts ...grpc.CallOption) (*Empty, error) {
+func (c *yACS5EClient) Login(ctx context.Context, in *TUser, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
 	err := grpc.Invoke(ctx, "/YACS5e/Login", in, out, c.cc, opts...)
 	if err != nil {
@@ -129,13 +137,13 @@ type YACS5EServer interface {
 	// 101: INVALID LOGIN
 	// 102: INVALID PASSWORD
 	// 103: USER EXISTS
-	Registration(context.Context, *User) (*Empty, error)
+	Registration(context.Context, *TUser) (*Empty, error)
 	// ERROR CODES:
 	// 110: UNKNOWN ERROR
 	// 111: INVALID LOGIN
 	// 112: INVALID PASSWORD
 	// 113: USER EXISTS
-	Login(context.Context, *User) (*Empty, error)
+	Login(context.Context, *TUser) (*Empty, error)
 }
 
 func RegisterYACS5EServer(s *grpc.Server, srv YACS5EServer) {
@@ -143,7 +151,7 @@ func RegisterYACS5EServer(s *grpc.Server, srv YACS5EServer) {
 }
 
 func _YACS5E_Registration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(User)
+	in := new(TUser)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -155,13 +163,13 @@ func _YACS5E_Registration_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: "/YACS5e/Registration",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(YACS5EServer).Registration(ctx, req.(*User))
+		return srv.(YACS5EServer).Registration(ctx, req.(*TUser))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _YACS5E_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(User)
+	in := new(TUser)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -173,7 +181,7 @@ func _YACS5E_Login_Handler(srv interface{}, ctx context.Context, dec func(interf
 		FullMethod: "/YACS5e/Login",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(YACS5EServer).Login(ctx, req.(*User))
+		return srv.(YACS5EServer).Login(ctx, req.(*TUser))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -198,14 +206,16 @@ var _YACS5E_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("yacs5e.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 141 bytes of a gzipped FileDescriptorProto
+	// 161 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xa9, 0x4c, 0x4c, 0x2e,
-	0x36, 0x4d, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x57, 0xb2, 0xe0, 0x62, 0x09, 0x2d, 0x4e, 0x2d,
-	0x12, 0x12, 0xe1, 0x62, 0xcd, 0xc9, 0x4f, 0xcf, 0xcc, 0x93, 0x60, 0x54, 0x60, 0xd4, 0xe0, 0x0c,
-	0x82, 0x70, 0x84, 0xa4, 0xb8, 0x38, 0x0a, 0x12, 0x8b, 0x8b, 0xcb, 0xf3, 0x8b, 0x52, 0x24, 0x98,
-	0xc0, 0x12, 0x70, 0xbe, 0x12, 0x3b, 0x17, 0xab, 0x6b, 0x6e, 0x41, 0x49, 0xa5, 0x91, 0x3d, 0x17,
-	0x5b, 0xa4, 0xa3, 0x73, 0xb0, 0x69, 0xaa, 0x90, 0x2c, 0x17, 0x4f, 0x50, 0x6a, 0x7a, 0x66, 0x71,
-	0x49, 0x51, 0x62, 0x49, 0x66, 0x7e, 0x9e, 0x10, 0xab, 0x1e, 0xc8, 0x6c, 0x29, 0x36, 0x3d, 0xb0,
-	0x42, 0x21, 0x31, 0x2e, 0x56, 0x1f, 0xb0, 0xb1, 0xa8, 0xe2, 0x49, 0x6c, 0x60, 0xa7, 0x18, 0x03,
-	0x02, 0x00, 0x00, 0xff, 0xff, 0x8c, 0xeb, 0x6c, 0x24, 0x9a, 0x00, 0x00, 0x00,
+	0x36, 0x4d, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x57, 0x0a, 0xe7, 0x62, 0x0d, 0x09, 0x2d, 0x4e,
+	0x2d, 0x12, 0x12, 0xe1, 0x62, 0xcd, 0xc9, 0x4f, 0xcf, 0xcc, 0x93, 0x60, 0x54, 0x60, 0xd4, 0xe0,
+	0x0c, 0x82, 0x70, 0x84, 0xa4, 0xb8, 0x38, 0x0a, 0x12, 0x8b, 0x8b, 0xcb, 0xf3, 0x8b, 0x52, 0x24,
+	0x98, 0xc0, 0x12, 0x70, 0xbe, 0x90, 0x0c, 0x17, 0x67, 0x51, 0x6a, 0x71, 0x41, 0x48, 0x7e, 0x76,
+	0x6a, 0x9e, 0x04, 0x33, 0x58, 0x12, 0x21, 0xa0, 0xc4, 0xce, 0xc5, 0xea, 0x9a, 0x5b, 0x50, 0x52,
+	0x69, 0xe4, 0xc8, 0xc5, 0x16, 0xe9, 0xe8, 0x1c, 0x6c, 0x9a, 0x2a, 0x24, 0xc7, 0xc5, 0x13, 0x94,
+	0x9a, 0x9e, 0x59, 0x5c, 0x52, 0x94, 0x58, 0x92, 0x99, 0x9f, 0x27, 0xc4, 0xa6, 0x07, 0xb6, 0x5a,
+	0x8a, 0x4d, 0x0f, 0xac, 0x52, 0x48, 0x9c, 0x8b, 0xd5, 0x07, 0x6c, 0x2b, 0x9a, 0x44, 0x12, 0x1b,
+	0xd8, 0xad, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0x57, 0xbe, 0xa9, 0x77, 0xbb, 0x00, 0x00,
+	0x00,
 }

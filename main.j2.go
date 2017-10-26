@@ -6,10 +6,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"log"
 	"net"
-	"os"
-	"os/signal"
 	"strconv"
-	"time"
 )
 
 var (
@@ -19,8 +16,7 @@ var (
 	serverAddress = ":{{ server_port }}"
 	serverOpts    []grpc.ServerOption
 
-	exitProgramChannel chan bool      = make(chan bool, 1)
-	signalChannel      chan os.Signal = make(chan os.Signal, 1)
+	exitProgramChannel chan bool = make(chan bool, 1)
 )
 
 func main() {
@@ -50,27 +46,6 @@ func main() {
 		grpcServer.Serve(lis)
 	}()
 
-	signal.Notify(signalChannel, os.Interrupt)
-
-	sig := <-signalChannel
-	log.Println("got stuff:")
-	log.Println(sig.String())
-	log.Println(sig)
-
-	time.Sleep(5 * time.Second)
-
 	<-exitProgramChannel
 	return
-}
-
-func init() {
-	//go func() {
-	//	for sig := range signalChannel {
-	//		log.Println("got stuff:")
-	//		sig.Signal()
-	//		log.Println(sig)
-	//		time.Sleep(5 * time.Second)
-	//	}
-	//}()
-
 }
