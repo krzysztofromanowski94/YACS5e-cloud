@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+
+
+service YACS5e {
+    // ERROR CODES:
+    // 100: UNKNOWN ERROR
+    // 101: INVALID LOGIN
+    // 102: INVALID PASSWORD
+    // 103: USER EXISTS
+    rpc Registration (TUser) returns (Empty);
+
+    // ERROR CODES:
+    // 110: UNKNOWN ERROR
+    // 111: INVALID LOGIN
+    // 112: INVALID PASSWORD
+    // 113: USER EXISTS
+    rpc Login (TUser) returns (Empty);
+}
+
+message TUser {
+    string login = 1;
+    string password = 2;
+    string respToken = 3;
+}
+
+message Empty {
+}

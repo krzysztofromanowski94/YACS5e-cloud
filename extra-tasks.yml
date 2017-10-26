@@ -1,0 +1,15 @@
+- name: get dependencies
+  command: go get ./...
+  args:
+    chdir: "{{ repository_dir }}"
+
+- name: install
+  command: go install
+  args:
+      chdir: "{{ repository_dir }}"
+
+- name: create symlink
+  file:
+    src: "/go/bin/YACS5e-cloud"
+    dest: "/go/bin/server"
+    state: link
