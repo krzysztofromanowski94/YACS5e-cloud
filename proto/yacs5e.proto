@@ -12,9 +12,7 @@ service YACS5e {
 
     // ERROR CODES:
     // 110: UNKNOWN ERROR
-    // 111: INVALID LOGIN
-    // 112: INVALID PASSWORD
-    // 113: USER EXISTS
+    // 111: INVALID CREDENTIALS
     rpc Login (TUser) returns (Empty);
 }
 
@@ -22,6 +20,7 @@ message TUser {
     string login = 1;
     string password = 2;
     string respToken = 3;
+    string visibleName = 4;
 }
 
 message Empty {
