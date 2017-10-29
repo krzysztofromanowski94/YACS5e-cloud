@@ -49,16 +49,6 @@ func init() {
 
 	log.Println("Connection estabilished")
 
-	user := &pb.TUser{"testlogin", "12345", "token", "Tester"}
-	user2 := &pb.TUser{"testlogin2", "12345", "token2", "Tester2"}
-
-	log.Println("Testing the registration functionality with user:\n", user)
-
-	testserver := YACS5eServer{}
-	testserver.Registration(nil, user)
-	testserver.Login(nil, user)
-	testserver.Login(nil, user2)
-
 }
 
 // rpc Registration (User) returns (Empty)
