@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	pb "github.com/krzysztofromanowski94/YACS5e-cloud/proto"
 	"golang.org/x/net/context"
@@ -66,8 +67,8 @@ func (server *YACS5eServer) Registration(ctx context.Context, user *pb.TUser) (*
 		switch strErr := err.Error(); {
 
 		case strings.Contains(strErr, "Error 1062"):
-			log.Println("User ", user.Login, " exists")
-			return &pb.Empty{}, status.Errorf(103, "User", user.Login, "exists.")
+			returnStr := fmt.Sprint("User ", user.Login, " exists.")
+			return &pb.Empty{}, status.Errorf(103, returnStr)
 
 		default:
 			log.Fatal("Registering user caused unknown ERROR: ", err)
@@ -75,40 +76,41 @@ func (server *YACS5eServer) Registration(ctx context.Context, user *pb.TUser) (*
 		}
 	}
 
-	return &pb.Empty{}, status.Errorf(0, "Registered user: ", user.Login)
+	returnStr := fmt.Sprint("Registered user: ", user.Login)
+	return &pb.Empty{}, status.Errorf(0, returnStr)
 }
 
 // rpc Login (User) returns (Empty)
 // ERROR CODES:
 // 110: UNKNOWN ERROR
 // 111: INVALID CREDENTIALS
+// 112: USER NOT FOUND
 func (server *YACS5eServer) Login(ctx context.Context, user *pb.TUser) (*pb.Empty, error) {
 
 	// Here should be checking if recaptcha is right
 
-	row := db.QueryRow("SELECT login, visible_name FROM users WHERE login=? AND password=?", user.Login, user.Password)
-
-	var (
-		login       string
-		visibleName string
-	)
-
-	err := row.Scan(&login, &visibleName)
+	row, err := db.Query("SELECT login, visible_name FROM users WHERE login=? AND password=? LIMIT 1", user.Login, user.Password)
 
 	if err != nil {
-		switch strErr := err.Error(); {
-
-		case strings.Contains(strErr, "sql: no rows in result set"):
-			log.Println("Wrong login and/or password for user: ", user.Login)
-			return &pb.Empty{}, status.Errorf(111, "INVALID CREDENTIALS")
-
-		default:
-			log.Fatal("Logging user caused unknown ERROR: ", err)
-			return &pb.Empty{}, status.Errorf(110, "UNKNOWN ERROR: ", err)
-		}
+		returnStr := fmt.Sprint("UNKNOWN ERROR: ", err)
+		return &pb.Empty{}, status.Errorf(110, returnStr)
 	}
 
-	log.Println("After query: ", login, visibleName)
+	for row.Next() {
+		var (
+			login       string
+			visibleName string
+		)
 
-	return &pb.Empty{}, status.Errorf(0, "User ", user.Login, " may exists. I don't know yet ;x")
+		err := row.Scan(&login, &visibleName)
+		if err != nil {
+			returnStr := fmt.Sprint("UNKNOWN ERROR: ", err)
+			return &pb.Empty{}, status.Errorf(110, returnStr)
+		}
+
+		return &pb.Empty{}, status.Errorf(0, "User found")
+	}
+
+	returnStr := fmt.Sprint("User ", user.Login, " not found")
+	return &pb.Empty{}, status.Errorf(112, returnStr)
 }
