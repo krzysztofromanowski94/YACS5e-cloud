@@ -71,7 +71,7 @@ func (server *YACS5eServer) Registration(ctx context.Context, user *pb.TUser) (*
 
 		default:
 			log.Fatal("Registering user caused unknown ERROR: ", err)
-			return &pb.Empty{}, status.Errorf(1, "Unknown error: ", err)
+			return &pb.Empty{}, status.Errorf(100, "Unknown error: ", err)
 		}
 	}
 
