@@ -19,6 +19,10 @@ service YACS5e {
     // 120: UNKNOWN ERROR
     // 121: INVALID CREDENTIALS
     // 122: CHARACTER DOES NOT EXISTS
+    // 123: ERROR GETTING DATA FROM STREAM
+    // 124: ERROR SENDING DATA TO STREAM
+    // 125: INCORRECT FLOW
+    // 126: USER DON'T HAVE THIS CHARACTER
     rpc GetCharacter (stream TCharacter) returns (stream TCharacter);
 }
 
@@ -30,9 +34,12 @@ message TUser {
 }
 
 message TCharacter {
-    TUser user = 5;
-    bool confirm = 6;
-    bytes blob = 7;
+    oneof union {
+        TUser user = 5;
+        bytes blob = 6;
+        // id; name; short desc
+        int32 id = 7;
+    }
 }
 
 message Empty {
