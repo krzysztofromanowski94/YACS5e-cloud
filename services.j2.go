@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	pb "github.com/krzysztofromanowski94/YACS5e-cloud/proto"
@@ -93,158 +92,114 @@ func (server *YACS5eServer) Login(ctx context.Context, user *pb.TUser) (*pb.Empt
 
 // ERROR CODES:
 // 120: UNKNOWN ERROR
-// 121: INVALID CREDENTIALS
-// 122: CHARACTER DOES NOT EXISTS
-// 123: ERROR GETTING DATA FROM STREAM
+// 54: ERROR GETTING DATA FROM STREAM
 // 124: ERROR SENDING DATA TO STREAM
 // 125: INCORRECT FLOW
 // 126: USER DON'T HAVE THIS CHARACTER
-func (server *YACS5eServer) GetCharacter(stream pb.YACS5E_GetCharacterServer) error {
+func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) error {
+
 	var (
-		user          *pb.TUser
-		characterList CharacterList
+		user *pb.TUser
 	)
 
-	streamIn, err := stream.Recv()
-	if err != nil {
-		returnErr := fmt.Sprint("ERROR GETTING DATA FROM INPUT STREAM: ", err)
-		log.Println(returnErr)
-		return status.Errorf(123, returnErr)
-	}
+	// Check recaptcha
+
+	//streamIn, err := stream.Recv()
+	//if err != nil {
+	//	LogUnknownError(err)
+	//	returnStr := fmt.Sprint("ERROR GETTING DATA FROM INPUT STREAM: ", err)
+	//	return status.Errorf(54, returnStr)
+	//}
 
 	// 1. Check credentials
 
-	switch tCharacterUnion := streamIn.Union.(type) {
+	streamIn := &pb.TTalk{&pb.TTalk_User{&pb.TUser{"testUser", "testPass", "", "", 0}}}
 
-	case *pb.TCharacter_User:
-		var (
-			userID int
-		)
-		err := db.QueryRow(
-			"SELECT id FROM users WHERE login=? AND password=? LIMIT 1",
-			tCharacterUnion.User.Login,
-			tCharacterUnion.User.Password,
-		).Scan(&userID)
+	user, err := partialLogin(streamIn)
+	if err != nil {
+		return err
+	}
 
-		switch err {
+	//err = stream.Send(&pb.TTalk{&pb.TTalk_Good{true}})
+	//if err != nil {
+	//	LogUnknownError(err)
+	//	returnStr := fmt.Sprint("ERROR SENDING DATA FROM INPUT STREAM: ", err)
+	//	return status.Errorf(55, returnStr)
+	//}
 
-		case sql.ErrNoRows:
-			// User does not exists
-			return status.Errorf(121, "INVALID CREDENTIALS")
+	// 2. Get characters timestamp from client
 
-		case nil:
-			// User exists
-			user = tCharacterUnion.User
+	//var (
+	//	clientTimestampList = make([]*pb.TCharacter, 0)
+	//)
+
+	//gettingTimestamps := true
+	//for gettingTimestamps{
+	//
+	//	streamIn, err := stream.Recv()
+	//	if err != nil {
+	//		LogUnknownError(err)
+	//	}
+	//
+	//	switch ttalk := streamIn.(type) {
+	//
+	//	case *pb.TTalk_Character:
+	//		if ttalk.Character.Timestamp != 0 {
+	//			clientTimestampList = append(clientTimestampList, ttalk.Character)
+	//		} else {
+	//			gettingTimestamps = false
+	//			break
+	//	}
+	//
+	//	default:
+	//		return status.Errorf(125, "Expected type TTalk_Character")
+	//	}
+	//}
+
+	// 3a. Get timestamps from database
+
+	var (
+		timestampsDB []*pb.TCharacter
+	)
+
+	log.Println(user)
+	timestampsQuery, err := db.Query("SELECT timestamp, uuid, data FROM characters WHERE users_id=?", user.Id)
+	if err != nil {
+		switch strErr := err.Error(); {
+		case strings.Contains(strErr, "Error 1062"):
+			// User don't have any characters in database
 			break
-
 		default:
 			LogUnknownError(err)
-			returnStr := fmt.Sprint("UNKNOWN ERROR: ", err)
+			returnStr := fmt.Sprint("UNKNOWN ERROR:", err)
 			return status.Errorf(120, returnStr)
 		}
-
-	default:
-		return status.Errorf(125, "EXPECTED TYPE IS TCharacter_User")
 	}
 
-	// 2. Return character list
-
-	rows, err := db.Query("SELECT id, name, data FROM characters WHERE users_id=(SELECT id FROM users WHERE login=?)", user.Login)
-	if err != nil {
-		LogUnknownError(err)
-		returnStr := fmt.Sprint("UNKNOWN ERROR: ", err)
-		return status.Errorf(120, returnStr)
-	}
-
-	for rows.Next() {
+	for timestampsQuery.Next() {
 		var (
-			id   int
-			name string
-			data []byte
+			timestamp uint64
+			uuid      []byte
+			blob      []byte
 		)
-
-		err := rows.Scan(&id, &name, &data)
+		err = timestampsQuery.Scan(
+			&timestamp,
+			&uuid,
+			&blob,
+		)
 		if err != nil {
 			LogUnknownError(err)
-			returnStr := fmt.Sprint("UNKNOWN ERROR: ", err)
+			returnStr := fmt.Sprint("UNKNOWN ERROR:", err)
 			return status.Errorf(120, returnStr)
 		}
-
-		// unmarshall character blob data to map[string]interface{}
-		var characterDataIF interface{}
-		err = json.Unmarshal(data, &characterDataIF)
-		if err != nil {
-			LogUnknownError(err)
-		}
-		characterData := characterDataIF.(map[string]interface{})
-
-		// add character to list
-		switch desc := characterData["description"].(type) {
-		case string:
-			characterList.Characters = append(characterList.Characters, CharacterInfo{
-				id,
-				name,
-				desc,
-			})
-		}
+		timestampsDB = append(timestampsDB, &pb.TCharacter{Uuid: uuid, Timestamp: timestamp, Blob: blob})
 	}
 
-	// Select the value of key `characters` to be send. It will result as an anonymous list.
-	blob, err := json.Marshal(characterList.Characters)
-	if err != nil {
-		LogUnknownError(err)
-		returnStr := fmt.Sprint("UNKNOWN ERROR: ", err)
-		return status.Errorf(120, returnStr)
-	}
+	// 3b. Decide what characters need to be updated on server
 
-	// Send list
-	err = stream.Send(&pb.TCharacter{&pb.TCharacter_Blob{blob}})
-	if err != nil {
-		LogUnknownError(err)
-		returnStr := fmt.Sprint("ERROR SENDING DATA TO STREAM: ", err)
-		return status.Errorf(124, returnStr)
-	}
+	log.Println(timestampsDB)
 
-	// Get character id
-	var characterId int
-
-	streamIn, err = stream.Recv()
-	if err != nil {
-		returnErr := fmt.Sprint("ERROR GETTING DATA FROM INPUT STREAM: ", err)
-		log.Println(returnErr)
-		return status.Errorf(123, returnErr)
-	}
-
-	switch tCharacterUnion := streamIn.Union.(type) {
-	case *pb.TCharacter_Id:
-		characterId = int(tCharacterUnion.Id)
-
-	default:
-		return status.Errorf(125, "EXPECTED TYPE IS TCharacter_Id")
-	}
-
-	// Get selected character from database
-	var characterData []byte
-
-	err = db.QueryRow(
-		"SELECT data FROM characters WHERE id=? AND users_id=(SELECT id FROM users WHERE login=?)",
-		characterId,
-		user.Login,
-	).Scan(&characterData)
-
-	if err == sql.ErrNoRows {
-		return status.Errorf(126, "USER DON'T HAVE THIS CHARACTER")
-	}
-
-	// Send character to client
-	err = stream.Send(&pb.TCharacter{&pb.TCharacter_Blob{characterData}})
-	if err != nil {
-		LogUnknownError(err)
-		returnStr := fmt.Sprint("ERROR SENDING DATA TO STREAM", err)
-		return status.Errorf(124, returnStr)
-	}
-
-	return status.Errorf(0, "Sent the character")
+	return status.Errorf(0, "")
 }
 
 func init() {
@@ -266,10 +221,43 @@ func init() {
 
 	log.Println("Connection estabilished")
 
-	//testServer := newServer()
-	//
-	//log.Println(testServer.GetCharacter(nil))
+	testServer := newServer()
 
+	log.Println(testServer.Synchronize(nil))
+
+}
+
+func partialLogin(tTalk *pb.TTalk) (user *pb.TUser, err error) {
+	switch tCharacterUnion := tTalk.Union.(type) {
+
+	case *pb.TTalk_User:
+		err := db.QueryRow(
+			"SELECT id FROM users WHERE login=? AND password=? LIMIT 1",
+			tCharacterUnion.User.Login,
+			tCharacterUnion.User.Password,
+		).Scan(&tCharacterUnion.User.Id)
+
+		switch err {
+		case sql.ErrNoRows:
+			// User does not exists
+			return nil, status.Errorf(52, "INVALID CREDENTIALS")
+
+		case nil:
+			// User exists
+			return tCharacterUnion.User, nil
+			break
+
+		default:
+			LogUnknownError(err)
+			returnStr := fmt.Sprint("UNKNOWN ERROR: ", err)
+			return nil, status.Errorf(51, returnStr)
+		}
+
+	default:
+		return nil, status.Errorf(53, "EXPECTED TYPE IS TTalk_User")
+	}
+
+	return nil, status.Errorf(2, "UNEXPECTED RETURN AT PARTIAL LOGIN")
 }
 
 func LogUnknownError(err error) {
@@ -282,15 +270,15 @@ func LogUnknownError(err error) {
 type YACS5eServer struct {
 }
 
-type CharacterList struct {
-	Characters []CharacterInfo `json:"characters"`
-}
+//type CharacterList struct {
+//	Characters []CharacterInfo `json:"characters"`
+//}
 
-type CharacterInfo struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
+//type CharacterInfo struct {
+//	ID          int    `json:"id"`
+//	Name        string `json:"name"`
+//	Description string `json:"description"`
+//}
 
 func newServer() *YACS5eServer {
 	return new(YACS5eServer)

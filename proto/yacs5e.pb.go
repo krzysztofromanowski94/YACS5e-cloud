@@ -10,6 +10,7 @@ It is generated from these files:
 It has these top-level messages:
 	TUser
 	TCharacter
+	TTalk
 	Empty
 */
 package yacs5e
@@ -39,6 +40,7 @@ type TUser struct {
 	Password    string `protobuf:"bytes,2,opt,name=password" json:"password,omitempty"`
 	RespToken   string `protobuf:"bytes,3,opt,name=respToken" json:"respToken,omitempty"`
 	VisibleName string `protobuf:"bytes,4,opt,name=visibleName" json:"visibleName,omitempty"`
+	Id          uint32 `protobuf:"varint,5,opt,name=id" json:"id,omitempty"`
 }
 
 func (m *TUser) Reset()                    { *m = TUser{} }
@@ -74,12 +76,17 @@ func (m *TUser) GetVisibleName() string {
 	return ""
 }
 
+func (m *TUser) GetId() uint32 {
+	if m != nil {
+		return m.Id
+	}
+	return 0
+}
+
 type TCharacter struct {
-	// Types that are valid to be assigned to Union:
-	//	*TCharacter_User
-	//	*TCharacter_Blob
-	//	*TCharacter_Id
-	Union isTCharacter_Union `protobuf_oneof:"union"`
+	Uuid      []byte `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Timestamp uint64 `protobuf:"varint,2,opt,name=timestamp" json:"timestamp,omitempty"`
+	Blob      []byte `protobuf:"bytes,3,opt,name=blob,proto3" json:"blob,omitempty"`
 }
 
 func (m *TCharacter) Reset()                    { *m = TCharacter{} }
@@ -87,129 +94,171 @@ func (m *TCharacter) String() string            { return proto.CompactTextString
 func (*TCharacter) ProtoMessage()               {}
 func (*TCharacter) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
-type isTCharacter_Union interface {
-	isTCharacter_Union()
+func (m *TCharacter) GetUuid() []byte {
+	if m != nil {
+		return m.Uuid
+	}
+	return nil
 }
 
-type TCharacter_User struct {
-	User *TUser `protobuf:"bytes,5,opt,name=user,oneof"`
-}
-type TCharacter_Blob struct {
-	Blob []byte `protobuf:"bytes,6,opt,name=blob,proto3,oneof"`
-}
-type TCharacter_Id struct {
-	Id int32 `protobuf:"varint,7,opt,name=id,oneof"`
+func (m *TCharacter) GetTimestamp() uint64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
 }
 
-func (*TCharacter_User) isTCharacter_Union() {}
-func (*TCharacter_Blob) isTCharacter_Union() {}
-func (*TCharacter_Id) isTCharacter_Union()   {}
+func (m *TCharacter) GetBlob() []byte {
+	if m != nil {
+		return m.Blob
+	}
+	return nil
+}
 
-func (m *TCharacter) GetUnion() isTCharacter_Union {
+type TTalk struct {
+	// Types that are valid to be assigned to Union:
+	//	*TTalk_User
+	//	*TTalk_Character
+	//	*TTalk_Good
+	Union isTTalk_Union `protobuf_oneof:"union"`
+}
+
+func (m *TTalk) Reset()                    { *m = TTalk{} }
+func (m *TTalk) String() string            { return proto.CompactTextString(m) }
+func (*TTalk) ProtoMessage()               {}
+func (*TTalk) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+type isTTalk_Union interface {
+	isTTalk_Union()
+}
+
+type TTalk_User struct {
+	User *TUser `protobuf:"bytes,1,opt,name=user,oneof"`
+}
+type TTalk_Character struct {
+	Character *TCharacter `protobuf:"bytes,2,opt,name=character,oneof"`
+}
+type TTalk_Good struct {
+	Good bool `protobuf:"varint,3,opt,name=good,oneof"`
+}
+
+func (*TTalk_User) isTTalk_Union()      {}
+func (*TTalk_Character) isTTalk_Union() {}
+func (*TTalk_Good) isTTalk_Union()      {}
+
+func (m *TTalk) GetUnion() isTTalk_Union {
 	if m != nil {
 		return m.Union
 	}
 	return nil
 }
 
-func (m *TCharacter) GetUser() *TUser {
-	if x, ok := m.GetUnion().(*TCharacter_User); ok {
+func (m *TTalk) GetUser() *TUser {
+	if x, ok := m.GetUnion().(*TTalk_User); ok {
 		return x.User
 	}
 	return nil
 }
 
-func (m *TCharacter) GetBlob() []byte {
-	if x, ok := m.GetUnion().(*TCharacter_Blob); ok {
-		return x.Blob
+func (m *TTalk) GetCharacter() *TCharacter {
+	if x, ok := m.GetUnion().(*TTalk_Character); ok {
+		return x.Character
 	}
 	return nil
 }
 
-func (m *TCharacter) GetId() int32 {
-	if x, ok := m.GetUnion().(*TCharacter_Id); ok {
-		return x.Id
+func (m *TTalk) GetGood() bool {
+	if x, ok := m.GetUnion().(*TTalk_Good); ok {
+		return x.Good
 	}
-	return 0
+	return false
 }
 
 // XXX_OneofFuncs is for the internal use of the proto package.
-func (*TCharacter) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _TCharacter_OneofMarshaler, _TCharacter_OneofUnmarshaler, _TCharacter_OneofSizer, []interface{}{
-		(*TCharacter_User)(nil),
-		(*TCharacter_Blob)(nil),
-		(*TCharacter_Id)(nil),
+func (*TTalk) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _TTalk_OneofMarshaler, _TTalk_OneofUnmarshaler, _TTalk_OneofSizer, []interface{}{
+		(*TTalk_User)(nil),
+		(*TTalk_Character)(nil),
+		(*TTalk_Good)(nil),
 	}
 }
 
-func _TCharacter_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*TCharacter)
+func _TTalk_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*TTalk)
 	// union
 	switch x := m.Union.(type) {
-	case *TCharacter_User:
-		b.EncodeVarint(5<<3 | proto.WireBytes)
+	case *TTalk_User:
+		b.EncodeVarint(1<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.User); err != nil {
 			return err
 		}
-	case *TCharacter_Blob:
-		b.EncodeVarint(6<<3 | proto.WireBytes)
-		b.EncodeRawBytes(x.Blob)
-	case *TCharacter_Id:
-		b.EncodeVarint(7<<3 | proto.WireVarint)
-		b.EncodeVarint(uint64(x.Id))
+	case *TTalk_Character:
+		b.EncodeVarint(2<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Character); err != nil {
+			return err
+		}
+	case *TTalk_Good:
+		t := uint64(0)
+		if x.Good {
+			t = 1
+		}
+		b.EncodeVarint(3<<3 | proto.WireVarint)
+		b.EncodeVarint(t)
 	case nil:
 	default:
-		return fmt.Errorf("TCharacter.Union has unexpected type %T", x)
+		return fmt.Errorf("TTalk.Union has unexpected type %T", x)
 	}
 	return nil
 }
 
-func _TCharacter_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*TCharacter)
+func _TTalk_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*TTalk)
 	switch tag {
-	case 5: // union.user
+	case 1: // union.user
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		msg := new(TUser)
 		err := b.DecodeMessage(msg)
-		m.Union = &TCharacter_User{msg}
+		m.Union = &TTalk_User{msg}
 		return true, err
-	case 6: // union.blob
+	case 2: // union.character
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		x, err := b.DecodeRawBytes(true)
-		m.Union = &TCharacter_Blob{x}
+		msg := new(TCharacter)
+		err := b.DecodeMessage(msg)
+		m.Union = &TTalk_Character{msg}
 		return true, err
-	case 7: // union.id
+	case 3: // union.good
 		if wire != proto.WireVarint {
 			return true, proto.ErrInternalBadWireType
 		}
 		x, err := b.DecodeVarint()
-		m.Union = &TCharacter_Id{int32(x)}
+		m.Union = &TTalk_Good{x != 0}
 		return true, err
 	default:
 		return false, nil
 	}
 }
 
-func _TCharacter_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*TCharacter)
+func _TTalk_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*TTalk)
 	// union
 	switch x := m.Union.(type) {
-	case *TCharacter_User:
+	case *TTalk_User:
 		s := proto.Size(x.User)
-		n += proto.SizeVarint(5<<3 | proto.WireBytes)
+		n += proto.SizeVarint(1<<3 | proto.WireBytes)
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *TCharacter_Blob:
-		n += proto.SizeVarint(6<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(len(x.Blob)))
-		n += len(x.Blob)
-	case *TCharacter_Id:
-		n += proto.SizeVarint(7<<3 | proto.WireVarint)
-		n += proto.SizeVarint(uint64(x.Id))
+	case *TTalk_Character:
+		s := proto.Size(x.Character)
+		n += proto.SizeVarint(2<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *TTalk_Good:
+		n += proto.SizeVarint(3<<3 | proto.WireVarint)
+		n += 1
 	case nil:
 	default:
 		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
@@ -223,11 +272,12 @@ type Empty struct {
 func (m *Empty) Reset()                    { *m = Empty{} }
 func (m *Empty) String() string            { return proto.CompactTextString(m) }
 func (*Empty) ProtoMessage()               {}
-func (*Empty) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (*Empty) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
 
 func init() {
 	proto.RegisterType((*TUser)(nil), "TUser")
 	proto.RegisterType((*TCharacter)(nil), "TCharacter")
+	proto.RegisterType((*TTalk)(nil), "TTalk")
 	proto.RegisterType((*Empty)(nil), "Empty")
 }
 
@@ -256,7 +306,10 @@ type YACS5EClient interface {
 	// 120: UNKNOWN ERROR
 	// 121: INVALID CREDENTIALS
 	// 122: CHARACTER DOES NOT EXISTS
-	GetCharacter(ctx context.Context, opts ...grpc.CallOption) (YACS5E_GetCharacterClient, error)
+	// 123: ERROR GETTING DATA FROM STREAM
+	// 124: ERROR SENDING DATA TO STREAM
+	// 125: INCORRECT FLOW
+	Synchronize(ctx context.Context, opts ...grpc.CallOption) (YACS5E_SynchronizeClient, error)
 }
 
 type yACS5EClient struct {
@@ -285,31 +338,31 @@ func (c *yACS5EClient) Login(ctx context.Context, in *TUser, opts ...grpc.CallOp
 	return out, nil
 }
 
-func (c *yACS5EClient) GetCharacter(ctx context.Context, opts ...grpc.CallOption) (YACS5E_GetCharacterClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_YACS5E_serviceDesc.Streams[0], c.cc, "/YACS5e/GetCharacter", opts...)
+func (c *yACS5EClient) Synchronize(ctx context.Context, opts ...grpc.CallOption) (YACS5E_SynchronizeClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_YACS5E_serviceDesc.Streams[0], c.cc, "/YACS5e/Synchronize", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &yACS5EGetCharacterClient{stream}
+	x := &yACS5ESynchronizeClient{stream}
 	return x, nil
 }
 
-type YACS5E_GetCharacterClient interface {
-	Send(*TCharacter) error
-	Recv() (*TCharacter, error)
+type YACS5E_SynchronizeClient interface {
+	Send(*TTalk) error
+	Recv() (*TTalk, error)
 	grpc.ClientStream
 }
 
-type yACS5EGetCharacterClient struct {
+type yACS5ESynchronizeClient struct {
 	grpc.ClientStream
 }
 
-func (x *yACS5EGetCharacterClient) Send(m *TCharacter) error {
+func (x *yACS5ESynchronizeClient) Send(m *TTalk) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *yACS5EGetCharacterClient) Recv() (*TCharacter, error) {
-	m := new(TCharacter)
+func (x *yACS5ESynchronizeClient) Recv() (*TTalk, error) {
+	m := new(TTalk)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -333,7 +386,10 @@ type YACS5EServer interface {
 	// 120: UNKNOWN ERROR
 	// 121: INVALID CREDENTIALS
 	// 122: CHARACTER DOES NOT EXISTS
-	GetCharacter(YACS5E_GetCharacterServer) error
+	// 123: ERROR GETTING DATA FROM STREAM
+	// 124: ERROR SENDING DATA TO STREAM
+	// 125: INCORRECT FLOW
+	Synchronize(YACS5E_SynchronizeServer) error
 }
 
 func RegisterYACS5EServer(s *grpc.Server, srv YACS5EServer) {
@@ -376,26 +432,26 @@ func _YACS5E_Login_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
-func _YACS5E_GetCharacter_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(YACS5EServer).GetCharacter(&yACS5EGetCharacterServer{stream})
+func _YACS5E_Synchronize_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(YACS5EServer).Synchronize(&yACS5ESynchronizeServer{stream})
 }
 
-type YACS5E_GetCharacterServer interface {
-	Send(*TCharacter) error
-	Recv() (*TCharacter, error)
+type YACS5E_SynchronizeServer interface {
+	Send(*TTalk) error
+	Recv() (*TTalk, error)
 	grpc.ServerStream
 }
 
-type yACS5EGetCharacterServer struct {
+type yACS5ESynchronizeServer struct {
 	grpc.ServerStream
 }
 
-func (x *yACS5EGetCharacterServer) Send(m *TCharacter) error {
+func (x *yACS5ESynchronizeServer) Send(m *TTalk) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *yACS5EGetCharacterServer) Recv() (*TCharacter, error) {
-	m := new(TCharacter)
+func (x *yACS5ESynchronizeServer) Recv() (*TTalk, error) {
+	m := new(TTalk)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -417,8 +473,8 @@ var _YACS5E_serviceDesc = grpc.ServiceDesc{
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "GetCharacter",
-			Handler:       _YACS5E_GetCharacter_Handler,
+			StreamName:    "Synchronize",
+			Handler:       _YACS5E_Synchronize_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
@@ -429,22 +485,26 @@ var _YACS5E_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("yacs5e.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 266 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x5c, 0x90, 0x41, 0x4b, 0xc3, 0x30,
-	0x1c, 0x47, 0x97, 0xda, 0xb4, 0xee, 0xdf, 0x1e, 0x24, 0x0c, 0x0c, 0x65, 0x48, 0xe9, 0xa9, 0x07,
-	0x29, 0x32, 0xd9, 0x07, 0xd0, 0x21, 0xee, 0x20, 0x1e, 0x6a, 0x3d, 0x88, 0xa7, 0x74, 0xfd, 0x33,
-	0x83, 0x5d, 0x53, 0x92, 0x4c, 0xe9, 0xb7, 0x97, 0x45, 0xb1, 0x63, 0xc7, 0xf7, 0x5e, 0x20, 0xbf,
-	0x04, 0xe2, 0x41, 0x6c, 0xcc, 0x12, 0x8b, 0x5e, 0x2b, 0xab, 0xb2, 0x01, 0x68, 0xf5, 0x6a, 0x50,
-	0xb3, 0x19, 0xd0, 0x56, 0x6d, 0x65, 0xc7, 0x49, 0x4a, 0xf2, 0x69, 0xf9, 0x0b, 0x2c, 0x81, 0xf3,
-	0x5e, 0x18, 0xf3, 0xad, 0x74, 0xc3, 0x3d, 0x17, 0xfe, 0x99, 0xcd, 0x61, 0xaa, 0xd1, 0xf4, 0x95,
-	0xfa, 0xc4, 0x8e, 0x9f, 0xb9, 0x38, 0x0a, 0x96, 0x42, 0xf4, 0x25, 0x8d, 0xac, 0x5b, 0x7c, 0x16,
-	0x3b, 0xe4, 0xbe, 0xeb, 0xc7, 0x2a, 0x7b, 0x07, 0xa8, 0x56, 0x1f, 0x42, 0x8b, 0x8d, 0x45, 0xcd,
-	0xe6, 0xe0, 0xef, 0x0d, 0x6a, 0x4e, 0x53, 0x92, 0x47, 0x8b, 0xa0, 0x70, 0xab, 0xd6, 0x93, 0xd2,
-	0x59, 0x36, 0x03, 0xbf, 0x6e, 0x55, 0xcd, 0x83, 0x94, 0xe4, 0xf1, 0xc1, 0x1e, 0x88, 0x5d, 0x80,
-	0x27, 0x1b, 0x1e, 0xa6, 0x24, 0xa7, 0xeb, 0x49, 0xe9, 0xc9, 0xe6, 0x3e, 0x04, 0xba, 0xef, 0xa4,
-	0xea, 0xb2, 0x10, 0xe8, 0xc3, 0xae, 0xb7, 0xc3, 0x42, 0x41, 0xf0, 0x76, 0xb7, 0x7a, 0x59, 0x22,
-	0xbb, 0x82, 0xb8, 0xc4, 0xad, 0x34, 0x56, 0x0b, 0x2b, 0x55, 0xc7, 0xfe, 0xee, 0x48, 0x82, 0xc2,
-	0x9d, 0x64, 0x97, 0x40, 0x9f, 0xdc, 0xa3, 0x4f, 0xc3, 0x35, 0xc4, 0x8f, 0x68, 0xc7, 0xa9, 0x51,
-	0x31, 0xee, 0x4e, 0x8e, 0x21, 0x27, 0x37, 0xa4, 0x0e, 0xdc, 0xc7, 0xde, 0xfe, 0x04, 0x00, 0x00,
-	0xff, 0xff, 0x1e, 0x82, 0x1a, 0x0f, 0x68, 0x01, 0x00, 0x00,
+	// 330 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x5c, 0x91, 0xc1, 0x6a, 0xe3, 0x30,
+	0x10, 0x86, 0xe3, 0xac, 0xe5, 0x24, 0x63, 0xef, 0x1e, 0x44, 0x60, 0x4d, 0x08, 0x4b, 0xd6, 0xa7,
+	0x40, 0xc1, 0x94, 0x94, 0x3c, 0x40, 0x1b, 0x0a, 0x39, 0x94, 0x1e, 0x14, 0xf7, 0xd0, 0xa3, 0x6c,
+	0x8b, 0x44, 0xc4, 0x96, 0x5c, 0x49, 0x6e, 0x49, 0xdf, 0xa0, 0x6f, 0x5d, 0x3c, 0x4d, 0xeb, 0xd2,
+	0x93, 0x67, 0xfe, 0xcf, 0x9a, 0xff, 0x1f, 0x09, 0xa2, 0x13, 0x2f, 0xec, 0x5a, 0xa4, 0x8d, 0xd1,
+	0x4e, 0x27, 0x6f, 0x1e, 0x90, 0xec, 0xc1, 0x0a, 0x43, 0xa7, 0x40, 0x2a, 0xbd, 0x97, 0x2a, 0xf6,
+	0x16, 0xde, 0x72, 0xc2, 0x3e, 0x1a, 0x3a, 0x83, 0x71, 0xc3, 0xad, 0x7d, 0xd1, 0xa6, 0x8c, 0x87,
+	0x08, 0xbe, 0x7a, 0x3a, 0x87, 0x89, 0x11, 0xb6, 0xc9, 0xf4, 0x51, 0xa8, 0xf8, 0x17, 0xc2, 0x5e,
+	0xa0, 0x0b, 0x08, 0x9f, 0xa5, 0x95, 0x79, 0x25, 0xee, 0x79, 0x2d, 0x62, 0x1f, 0xf9, 0x77, 0x89,
+	0xfe, 0x81, 0xa1, 0x2c, 0x63, 0xb2, 0xf0, 0x96, 0xbf, 0xd9, 0x50, 0x96, 0x09, 0x03, 0xc8, 0x36,
+	0x07, 0x6e, 0x78, 0xe1, 0x84, 0xa1, 0x14, 0xfc, 0xb6, 0x95, 0x25, 0xc6, 0x89, 0x18, 0xd6, 0x9d,
+	0xa3, 0x93, 0xb5, 0xb0, 0x8e, 0xd7, 0x0d, 0xc6, 0xf1, 0x59, 0x2f, 0x74, 0x27, 0xf2, 0x4a, 0xe7,
+	0x18, 0x25, 0x62, 0x58, 0x27, 0x4f, 0x40, 0xb2, 0x8c, 0x57, 0x47, 0x3a, 0x07, 0xbf, 0xb5, 0xc2,
+	0xe0, 0xb8, 0x70, 0x15, 0xa4, 0xb8, 0xf4, 0x76, 0xc0, 0x50, 0xa5, 0x17, 0x30, 0x29, 0x3e, 0x9d,
+	0x71, 0x70, 0xb8, 0x0a, 0xd3, 0x3e, 0xcc, 0x76, 0xc0, 0x7a, 0x4e, 0xa7, 0xe0, 0xef, 0xb5, 0x2e,
+	0xd1, 0x67, 0xdc, 0x8d, 0xe8, 0xba, 0x9b, 0x11, 0x90, 0x56, 0x49, 0xad, 0x92, 0x11, 0x90, 0xdb,
+	0xba, 0x71, 0xa7, 0x55, 0x09, 0xc1, 0xe3, 0xf5, 0x66, 0xb7, 0x16, 0xf4, 0x1f, 0x44, 0x4c, 0xec,
+	0xa5, 0x75, 0x86, 0x3b, 0xa9, 0x15, 0x3d, 0xdb, 0xcf, 0x82, 0x14, 0xff, 0xa4, 0x7f, 0x81, 0xdc,
+	0xe1, 0x75, 0xff, 0x04, 0xff, 0x21, 0xdc, 0x9d, 0x54, 0x71, 0x30, 0x5a, 0xc9, 0x57, 0xd1, 0xe1,
+	0x6e, 0x99, 0xd9, 0xf9, 0xbb, 0xf4, 0x2e, 0xbd, 0x3c, 0xc0, 0x87, 0xbc, 0x7a, 0x0f, 0x00, 0x00,
+	0xff, 0xff, 0xe4, 0x00, 0xfe, 0xd5, 0xd8, 0x01, 0x00, 0x00,
 }

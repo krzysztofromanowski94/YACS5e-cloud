@@ -23,7 +23,17 @@ service YACS5e {
     // 124: ERROR SENDING DATA TO STREAM
     // 125: INCORRECT FLOW
     // 126: USER DON'T HAVE THIS CHARACTER
-    rpc GetCharacter (stream TCharacter) returns (stream TCharacter);
+    // DEPRECATED
+//    rpc GetCharacter (stream TTalk) returns (stream TTalk);
+
+    // ERROR CODES:
+    // 120: UNKNOWN ERROR
+    // 121: INVALID CREDENTIALS
+    // 122: CHARACTER DOES NOT EXISTS
+    // 123: ERROR GETTING DATA FROM STREAM
+    // 124: ERROR SENDING DATA TO STREAM
+    // 125: INCORRECT FLOW
+    rpc Synchronize (stream TTalk) returns (stream TTalk);
 }
 
 message TUser {
@@ -31,14 +41,20 @@ message TUser {
     string password = 2;
     string respToken = 3;
     string visibleName = 4;
+    uint32 id = 5;
 }
 
 message TCharacter {
+    bytes uuid = 1;
+    uint64 timestamp = 2;
+    bytes blob = 3;
+}
+
+message TTalk {
     oneof union {
-        TUser user = 5;
-        bytes blob = 6;
-        // id; name; short desc
-        int32 id = 7;
+        TUser user = 1;
+        TCharacter character = 2;
+        bool good = 3;
     }
 }
 
