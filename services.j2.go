@@ -62,6 +62,8 @@ func (server *YACS5eServer) Login(ctx context.Context, user *pb.TUser) (*pb.Empt
 
 	// Here should be checking if recaptcha is right
 
+	log.Println("Trying to login: ", user.Login, " ", user.Password)
+
 	row, err := db.Query("SELECT login, visible_name FROM users WHERE login=? AND password=? LIMIT 1", user.Login, user.Password)
 
 	if err != nil {
@@ -113,7 +115,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 
 	// 1. Check credentials
 
-	streamIn := &pb.TTalk{&pb.TTalk_User{&pb.TUser{"testUser", "testPass", "", "", 0}}}
+	streamIn := &pb.TTalk{&pb.TTalk_User{&pb.TUser{"testUser", "testPass", 0, "", "Maciek"}}}
 
 	user, err := partialLogin(streamIn)
 	if err != nil {
