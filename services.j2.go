@@ -5,10 +5,10 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	pb "github.com/krzysztofromanowski94/YACS5e-cloud/proto"
+	"github.com/krzysztofromanowski94/YACS5e-cloud/utils"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/status"
 	"log"
-	"runtime"
 	"strconv"
 	"strings"
 )
@@ -44,7 +44,7 @@ func (server *YACS5eServer) Registration(ctx context.Context, user *pb.TUser) (*
 			return &pb.Empty{}, status.Errorf(103, returnStr)
 
 		default:
-			LogUnknownError(err)
+			utils.LogUnknownError(err)
 			return &pb.Empty{}, status.Errorf(100, "Unknown error: ", err)
 		}
 	}
@@ -67,7 +67,7 @@ func (server *YACS5eServer) Login(ctx context.Context, user *pb.TUser) (*pb.Empt
 	row, err := db.Query("SELECT login, visible_name FROM users WHERE login=? AND password=? LIMIT 1", user.Login, user.Password)
 
 	if err != nil {
-		LogUnknownError(err)
+		utils.LogUnknownError(err)
 		returnStr := fmt.Sprint("UNKNOWN ERROR: ", err)
 		return &pb.Empty{}, status.Errorf(110, returnStr)
 	}
@@ -80,7 +80,7 @@ func (server *YACS5eServer) Login(ctx context.Context, user *pb.TUser) (*pb.Empt
 
 		err := row.Scan(&login, &visibleName)
 		if err != nil {
-			LogUnknownError(err)
+			utils.LogUnknownError(err)
 			returnStr := fmt.Sprint("UNKNOWN ERROR: ", err)
 			return &pb.Empty{}, status.Errorf(110, returnStr)
 		}
@@ -172,7 +172,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 			// User don't have any characters in database
 			break
 		default:
-			LogUnknownError(err)
+			utils.LogUnknownError(err)
 			returnStr := fmt.Sprint("UNKNOWN ERROR:", err)
 			return status.Errorf(120, returnStr)
 		}
@@ -190,7 +190,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 			&blob,
 		)
 		if err != nil {
-			LogUnknownError(err)
+			utils.LogUnknownError(err)
 			returnStr := fmt.Sprint("UNKNOWN ERROR:", err)
 			return status.Errorf(120, returnStr)
 		}
@@ -250,7 +250,7 @@ func partialLogin(tTalk *pb.TTalk) (user *pb.TUser, err error) {
 			break
 
 		default:
-			LogUnknownError(err)
+			utils.LogUnknownError(err)
 			returnStr := fmt.Sprint("UNKNOWN ERROR: ", err)
 			return nil, status.Errorf(51, returnStr)
 		}
@@ -260,13 +260,6 @@ func partialLogin(tTalk *pb.TTalk) (user *pb.TUser, err error) {
 	}
 
 	return nil, status.Errorf(2, "UNEXPECTED RETURN AT PARTIAL LOGIN")
-}
-
-func LogUnknownError(err error) {
-	if err != nil {
-		pc, fn, line, _ := runtime.Caller(1)
-		log.Printf("ERROR in %s[%s:%d] %v", runtime.FuncForPC(pc).Name(), fn, line, err)
-	}
 }
 
 type YACS5eServer struct {
