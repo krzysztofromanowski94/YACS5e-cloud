@@ -14,26 +14,19 @@ import (
 )
 
 var (
-	sqlDBName                = "{{ sql_dbname }}"
-	sqlHostname              = "{{ sql_hostname }}"
-	sqlPassword              = "{{ sql_password }}"
-	sqlPort                  = "{{ sql_port }}"
-	sqlUser                  = "{{ sql_user }}"
-	sqlMaxOpenConnections, _ = strconv.ParseInt("{{ sql_max_open_connections }}", 10, 64)
-	db                       *sql.DB
-	dataSourceName           = sqlUser + ":" + sqlPassword +
-		"@tcp(" + sqlHostname + ":" + sqlPort + ")/" + sqlDBName
+	sqlDBName   = "{{ sql_dbname }}"
+	sqlHostname = "{{ sql_hostname }}"
+	sqlPassword = "{{ sql_password }}"
+	sqlPort     = "{{ sql_port }}"
+	sqlUser     = "{{ sql_user }}"
+	db          *sql.DB
 )
 
-// rpc Registration (User) returns (Empty)
-// ERROR CODES:
-// 100: UNKNOWN ERROR
-// 101: INVALID LOGIN
-// 102: INVALID PASSWORD
-// 103: USER EXISTS
 func (server *YACS5eServer) Registration(ctx context.Context, user *pb.TUser) (*pb.Empty, error) {
 
 	// Here should be checking if recaptcha is right
+
+	log.Println("Trying to register user ", user.Password)
 
 	_, err := db.Exec("INSERT INTO users VALUES (NULL, ?, ?, ?)", user.Login, user.Password, user.VisibleName)
 	if err != nil {
@@ -41,6 +34,7 @@ func (server *YACS5eServer) Registration(ctx context.Context, user *pb.TUser) (*
 
 		case strings.Contains(strErr, "Error 1062"):
 			returnStr := fmt.Sprint("User ", user.Login, " exists.")
+			log.Println(returnStr)
 			return &pb.Empty{}, status.Errorf(103, returnStr)
 
 		default:
@@ -50,14 +44,10 @@ func (server *YACS5eServer) Registration(ctx context.Context, user *pb.TUser) (*
 	}
 
 	returnStr := fmt.Sprint("Registered user: ", user.Login)
+	log.Println(returnStr)
 	return &pb.Empty{}, status.Errorf(0, returnStr)
 }
 
-// rpc Login (User) returns (Empty)
-// ERROR CODES:
-// 110: UNKNOWN ERROR
-// 111: INVALID CREDENTIALS
-// 112: USER NOT FOUND
 func (server *YACS5eServer) Login(ctx context.Context, user *pb.TUser) (*pb.Empty, error) {
 
 	// Here should be checking if recaptcha is right
@@ -85,78 +75,71 @@ func (server *YACS5eServer) Login(ctx context.Context, user *pb.TUser) (*pb.Empt
 			return &pb.Empty{}, status.Errorf(110, returnStr)
 		}
 
+		log.Println("User logged in")
 		return &pb.Empty{}, status.Errorf(0, "User found")
 	}
 
 	returnStr := fmt.Sprint("User ", user.Login, " not found")
+	log.Println(returnStr)
 	return &pb.Empty{}, status.Errorf(112, returnStr)
 }
 
-// ERROR CODES:
-// 120: UNKNOWN ERROR
-// 54: ERROR GETTING DATA FROM STREAM
-// 124: ERROR SENDING DATA TO STREAM
-// 125: INCORRECT FLOW
-// 126: USER DON'T HAVE THIS CHARACTER
 func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) error {
-
 	var (
 		user *pb.TUser
 	)
 
 	// Check recaptcha
 
-	//streamIn, err := stream.Recv()
-	//if err != nil {
-	//	LogUnknownError(err)
-	//	returnStr := fmt.Sprint("ERROR GETTING DATA FROM INPUT STREAM: ", err)
-	//	return status.Errorf(54, returnStr)
-	//}
+	streamIn, err := stream.Recv()
+	if err != nil {
+		utils.LogUnknownError(err)
+		returnStr := fmt.Sprint("ERROR GETTING DATA FROM INPUT STREAM: ", err)
+		return status.Errorf(54, returnStr)
+	}
 
 	// 1. Check credentials
 
-	streamIn := &pb.TTalk{&pb.TTalk_User{&pb.TUser{"testUser", "testPass", 0, "", "Maciek"}}}
-
-	user, err := partialLogin(streamIn)
+	user, err = partialLogin(streamIn)
 	if err != nil {
 		return err
 	}
 
-	//err = stream.Send(&pb.TTalk{&pb.TTalk_Good{true}})
-	//if err != nil {
-	//	LogUnknownError(err)
-	//	returnStr := fmt.Sprint("ERROR SENDING DATA FROM INPUT STREAM: ", err)
-	//	return status.Errorf(55, returnStr)
-	//}
+	err = stream.Send(&pb.TTalk{&pb.TTalk_Good{true}})
+	if err != nil {
+		utils.LogUnknownError(err)
+		returnStr := fmt.Sprint("ERROR SENDING DATA FROM INPUT STREAM: ", err)
+		return status.Errorf(55, returnStr)
+	}
 
 	// 2. Get characters timestamp from client
 
-	//var (
-	//	clientTimestampList = make([]*pb.TCharacter, 0)
-	//)
+	var (
+		clientTimestampList = make([]*pb.TCharacter, 0)
+	)
 
-	//gettingTimestamps := true
-	//for gettingTimestamps{
-	//
-	//	streamIn, err := stream.Recv()
-	//	if err != nil {
-	//		LogUnknownError(err)
-	//	}
-	//
-	//	switch ttalk := streamIn.(type) {
-	//
-	//	case *pb.TTalk_Character:
-	//		if ttalk.Character.Timestamp != 0 {
-	//			clientTimestampList = append(clientTimestampList, ttalk.Character)
-	//		} else {
-	//			gettingTimestamps = false
-	//			break
-	//	}
-	//
-	//	default:
-	//		return status.Errorf(125, "Expected type TTalk_Character")
-	//	}
-	//}
+	gettingTimestamps := true
+	for gettingTimestamps {
+
+		streamIn, err := stream.Recv()
+		if err != nil {
+			utils.LogUnknownError(err)
+		}
+
+		switch ttalk := streamIn.(type) {
+
+		case *pb.TTalk_Character:
+			if ttalk.Character.Timestamp != 0 {
+				clientTimestampList = append(clientTimestampList, ttalk.Character)
+			} else {
+				gettingTimestamps = false
+				break
+			}
+
+		default:
+			return status.Errorf(125, "Expected type TTalk_Character")
+		}
+	}
 
 	// 3a. Get timestamps from database
 
@@ -205,9 +188,14 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 }
 
 func init() {
-	log.Println("Connecting to: ", dataSourceName)
+	sqlMaxOpenConnections, err := strconv.ParseInt("{{ sql_max_open_connections }}", 10, 64)
+	if err != nil {
+		log.Fatalln("error parsing sql_max_open_connections")
+	}
 
-	var err error
+	dataSourceName := sqlUser + ":" + sqlPassword + "@tcp(" + sqlHostname + ":" + sqlPort + ")/" + sqlDBName
+
+	log.Println("Connecting to: ", dataSourceName)
 
 	db, err = sql.Open("mysql", dataSourceName)
 	if err != nil {
@@ -222,11 +210,6 @@ func init() {
 	db.SetMaxOpenConns(int(sqlMaxOpenConnections))
 
 	log.Println("Connection estabilished")
-
-	testServer := newServer()
-
-	log.Println(testServer.Synchronize(nil))
-
 }
 
 func partialLogin(tTalk *pb.TTalk) (user *pb.TUser, err error) {
