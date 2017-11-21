@@ -1,9 +1,11 @@
 package main
 
 import (
+	"crypto/tls"
 	pb "github.com/krzysztofromanowski94/YACS5e-cloud/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"io/ioutil"
 	"log"
 	"net"
 	"strconv"
@@ -31,10 +33,27 @@ func main() {
 	}
 
 	if useTls {
-		cred, err := credentials.NewServerTLSFromFile(tlsCertFile, tlsKeyFile)
+		//cred, err := credentials.NewServerTLSFromFile(tlsCertFile, tlsKeyFile)
+		//if err != nil {
+		//	log.Fatal("Failed to generate credentials. ERROR: ", err)
+		//}
+
+		BackendCert, err := ioutil.ReadFile(tlsCertFile)
+		if err != nil {
+			log.Fatal("Can't get BackendCert ERROR: ", err)
+		}
+		BackendKey, err := ioutil.ReadFile(tlsKeyFile)
+		if err != nil {
+			log.Fatal("Can't get BackendKey ERROR: ", err)
+		}
+
+		cert, err := tls.X509KeyPair(BackendCert, BackendKey)
 		if err != nil {
 			log.Fatal("Failed to generate credentials. ERROR: ", err)
 		}
+
+		cred := credentials.NewServerTLSFromCert(&cert)
+
 		serverOpts = append(serverOpts, grpc.Creds(cred))
 	}
 
