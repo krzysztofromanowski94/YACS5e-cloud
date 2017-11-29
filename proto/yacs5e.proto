@@ -22,7 +22,7 @@ message TUser {
 }
 
 message TCharacter {
-    bytes uuid = 1;
+    string uuid = 1;
     uint64 timestamp = 2;
     bytes blob = 3;
 }
