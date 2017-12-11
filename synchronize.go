@@ -1,9 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
-	"strings"
 
 	pb "github.com/krzysztofromanowski94/YACS5e-cloud/proto"
 	"github.com/krzysztofromanowski94/YACS5e-cloud/utils"
@@ -48,15 +48,6 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 
 	log.Println("Synchronize: Perform char sync one-by-one")
 
-	// var (
-	// 	clientTimestampList = make([]*pb.TCharacter, 0)
-	// 	serverCharList = make()
-	// )
-
-	// example list of characters
-	// TTalk_Character[] characterList =
-
-	// change character for character
 	exchangeCharInfo := true
 	for exchangeCharInfo {
 
@@ -66,13 +57,13 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 			return utils.ErrorStatus(err)
 		}
 
-		log.Println("streamIn:", streamIn)
+		log.Println("Synchronize: streamIn:", streamIn)
 
 		switch ttalk := streamIn.Union.(type) {
-
 		case *pb.TTalk_Character:
 
 			var (
+				name      string
 				timestamp uint64
 				data      []byte
 			)
@@ -80,31 +71,35 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 			log.Println("Synchronize: Trying to get data for user", user.Login, ttalk.Character.Uuid)
 
 			err := db.QueryRow(
-				"SELECT timestamp, data FROM characters WHERE users_id=(SELECT id FROM users WHERE login=?) AND uuid=? LIMIT 1",
+				"SELECT name, timestamp, data FROM characters WHERE users_id=(SELECT id FROM users WHERE login=?) AND uuid=? LIMIT 1",
 				user.Login,
 				ttalk.Character.Uuid,
-			).Scan(&timestamp, &data)
+			).Scan(&name, &timestamp, &data)
 
-			if err != nil {
+			if err == sql.ErrNoRows {
+				log.Println("Synchronize: character not found on server, ask for complete data")
+				// 3 - not on server
+				onCharacterNotFound(stream, *user)
+			} else if err != nil {
 				return utils.ErrorStatus(err)
 			}
 
-			log.Println("Character match:", timestamp, data)
-			err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{Blob: data, Timestamp: timestamp}}})
-			if err != nil {
-				log.Println("Synchronize return updated character error:", err)
+			// 0. Characters are synced
+			if timestamp == ttalk.Character.GetTimestamp() {
+				log.Println("Synchronize: Characters are even")
+				err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{Blob: data, Timestamp: timestamp}}})
+				if err != nil {
+					log.Println("Synchronize return updated character error:", err)
+				}
 			}
 
-			// if ttalk.Character.Timestamp != 0 {
+			//log.Println("Synchronize: Character match:", timestamp, data)
+			//err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{Blob: data, Timestamp: timestamp}}})
+			//if err != nil {
+			//	log.Println("Synchronize return updated character error:", err)
+			//}
+
 			// 	clientTimestampList = append(clientTimestampList, ttalk.Character)
-			// 	err = stream.Send(streamIn)
-			// 	if err != nil {
-			// 		log.Println("Synchronize return updated character error:", err)
-			// 	}
-			// } else {
-			// 	exchangeCharInfo = false
-			// 	break
-			// }
 
 		case *pb.TTalk_Good:
 			log.Println("Synchronize: no more characters on client")
@@ -117,48 +112,43 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 
 	}
 
-	// 3a. Get timestamps from database
-
-	var (
-		timestampsDB []*pb.TCharacter
-	)
-
-	log.Println(user)
-	timestampsQuery, err := db.Query("SELECT timestamp, uuid, data FROM characters WHERE users_id=?", user.Id)
-	if err != nil {
-		switch strErr := err.Error(); {
-		case strings.Contains(strErr, "Error 1062"):
-			// User don't have any characters in database
-			break
-		default:
-			utils.LogUnknownError(err)
-			returnStr := fmt.Sprint("UNKNOWN ERROR:", err)
-			return status.Errorf(120, returnStr)
-		}
-	}
-
-	for timestampsQuery.Next() {
-		var (
-			timestamp uint64
-			uuid      string
-			blob      []byte
-		)
-		err = timestampsQuery.Scan(
-			&timestamp,
-			&uuid,
-			&blob,
-		)
-		if err != nil {
-			utils.LogUnknownError(err)
-			returnStr := fmt.Sprint("UNKNOWN ERROR:", err)
-			return status.Errorf(120, returnStr)
-		}
-		timestampsDB = append(timestampsDB, &pb.TCharacter{Uuid: uuid, Timestamp: timestamp, Blob: blob})
-	}
-
-	// 3b. Decide what characters need to be updated on server
-
-	log.Println(timestampsDB)
-
 	return status.Errorf(0, "")
+}
+
+func onCharacterFound(stream pb.YACS5E_SynchronizeServer) {
+
+}
+
+// 3 - not on server - send timestamp == 0, receive complete character
+func onCharacterNotFound(stream pb.YACS5E_SynchronizeServer, user pb.TUser) error {
+	err := stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{Timestamp: 0}}})
+	if err != nil {
+		return utils.ErrorStatus(err)
+	}
+
+	streamIn, err := stream.Recv()
+	if err != nil {
+		return utils.ErrorStatus(err)
+	}
+
+	switch tCharacter := streamIn.Union.(type) {
+	case *pb.TTalk_Character:
+		char := tCharacter.Character
+		_, err := db.Exec(
+			"INSERT INTO characters "+
+				"SET uuid=?, users_id=(SELECT id FROM users WHERE login=?), timestamp=?, data=?",
+			char.Uuid,
+			user,
+			char.Timestamp,
+			char.Blob,
+		)
+		if err == sql.ErrNoRows {
+			log.Println("Synchronize: internar error:", err)
+			return status.Errorf(2, "Insert new character to db internal error")
+		} else if err != nil {
+			return utils.ErrorStatus(err)
+		}
+	}
+
+	return nil
 }
