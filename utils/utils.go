@@ -36,3 +36,12 @@ func ErrorStatus(err error) error {
 		return status.Errorf(51, returnStr)
 	}
 }
+
+func RemoveFromSlice(mySlice []string, toRemove string) []string {
+	for i := range mySlice {
+		if mySlice[i] == toRemove {
+			return append(mySlice[:i], mySlice[i+1:]...)
+		}
+	}
+	return mySlice
+}

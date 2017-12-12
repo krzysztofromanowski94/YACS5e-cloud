@@ -44,62 +44,125 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 		return status.Errorf(55, returnStr)
 	}
 
-	// 2. Perform char sync one-by-one
+	// 2a. Create slice of uuids'. If after app-sync there will be any left, app does not have them.
+	uuidQuery, err := db.Query("SELECT uuid FROM characters WHERE users_id=(SELECT id FROM users WHERE login=?)", user.Login)
+	if err != nil {
+		utils.ErrorStatus(err)
+	}
+
+	uuidSlice := make([]string, 0)
+	for uuidQuery.Next() {
+		var uuid string
+
+		err := uuidQuery.Scan(&uuid)
+		if err != nil {
+			utils.ErrorStatus(err)
+		}
+
+		uuidSlice = append(uuidSlice, uuid)
+	}
+
+	uuidSlice = append(uuidSlice, "asd")
+
+	log.Println("This user has theese characters on server dv:")
+	log.Println(uuidSlice)
+
+	uuidSlice = utils.RemoveFromSlice(uuidSlice, "asd")
+
+	log.Println("After remove:")
+	log.Println(uuidSlice)
+
+	// 2b. Perform char sync one-by-one
 
 	log.Println("Synchronize: Perform char sync one-by-one")
 
 	exchangeCharInfo := true
 	for exchangeCharInfo {
 
-		// get uuid and timestamp
+		// get login, uuid
 		streamIn, err := stream.Recv()
 		if err != nil {
 			return utils.ErrorStatus(err)
 		}
 
-		log.Println("Synchronize: streamIn:", streamIn)
-
 		switch ttalk := streamIn.Union.(type) {
 		case *pb.TTalk_Character:
 
 			var (
-				name      string
-				timestamp uint64
-				data      []byte
+				uuid     string
+				lastSync uint64
+				lastMod  uint64
+				data     []byte
 			)
 
 			log.Println("Synchronize: Trying to get data for user", user.Login, ttalk.Character.Uuid)
 
 			err := db.QueryRow(
-				"SELECT name, timestamp, data FROM characters WHERE users_id=(SELECT id FROM users WHERE login=?) AND uuid=? LIMIT 1",
+				"SELECT uuid, last_sync, last_mod, data FROM characters WHERE users_id=(SELECT id FROM users WHERE login=?) AND uuid=? LIMIT 1",
 				user.Login,
 				ttalk.Character.Uuid,
-			).Scan(&name, &timestamp, &data)
+			).Scan(&uuid, &lastSync, &lastMod, &data)
 
 			if err == sql.ErrNoRows {
 				log.Println("Synchronize: character not found on server, ask for complete data")
-				// 3 - not on server
+				// 4 - not on server - receive empty uuid, send complete character
 				onCharacterNotFound(stream, *user)
+				break
 			} else if err != nil {
 				return utils.ErrorStatus(err)
 			}
 
-			// 0. Characters are synced
-			if timestamp == ttalk.Character.GetTimestamp() {
-				log.Println("Synchronize: Characters are even")
-				err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{Blob: data, Timestamp: timestamp}}})
-				if err != nil {
-					log.Println("Synchronize return updated character error:", err)
+			err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{Uuid: uuid, LastSync: lastSync, LastMod: lastMod}}})
+			if err != nil {
+				return utils.ErrorStatus(err)
+			}
+
+			// Character is even
+			if lastSync == ttalk.Character.GetLastSync() && lastMod == ttalk.Character.GetLastMod() {
+				log.Println("Synchronize: Character is even (0)", uuid, lastSync, data)
+				break
+			}
+
+			// if not even - app wants to send data
+			streamIn, err = stream.Recv()
+			if err != nil {
+				return utils.ErrorStatus(err)
+			}
+			switch ttalk := streamIn.Union.(type) {
+			case *pb.TTalk_Character:
+				tChar := ttalk.Character
+				if tChar.GetLastSync() != 0 && tChar.GetLastMod() != 0 && tChar.Uuid != "" && len(tChar.Blob) > 0 {
+
+					log.Println("Synchronize: app wants to insert / update character uuid: " + tChar.Uuid)
+
+					_, err := db.Exec("INSERT INTO characters "+
+						"SET uuid=?, users_id=(SELECT id FROM users WHERE login=?), last_sync=?, last_mod=?, data=? "+
+						"ON DUPLICATE KEY UPDATE last_sync=?, last_mod=?, data=?",
+						tChar.Uuid, user.Login, tChar.LastSync, tChar.LastMod, tChar.Blob, tChar.LastSync, tChar.LastMod, tChar.Blob)
+
+					if err != nil {
+						return utils.ErrorStatus(err)
+					}
+					continue
+
+				} else if tChar.LastMod == 0 && tChar.LastSync == 0 {
+					log.Println("Synchronize: app asks for data")
+					err := stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{
+						Uuid:     uuid,
+						LastSync: lastSync,
+						LastMod:  lastMod,
+						Blob:     data,
+					}}})
+					if err != nil {
+						return utils.ErrorStatus(err)
+					}
+					continue
 				}
 			}
 
-			//log.Println("Synchronize: Character match:", timestamp, data)
-			//err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{Blob: data, Timestamp: timestamp}}})
-			//if err != nil {
-			//	log.Println("Synchronize return updated character error:", err)
-			//}
-
-			// 	clientTimestampList = append(clientTimestampList, ttalk.Character)
+			log.Println("Synchronize: Unimplemented...")
+			log.Println(streamIn)
+			log.Println(lastSync, lastMod)
 
 		case *pb.TTalk_Good:
 			log.Println("Synchronize: no more characters on client")
@@ -119,9 +182,9 @@ func onCharacterFound(stream pb.YACS5E_SynchronizeServer) {
 
 }
 
-// 3 - not on server - send timestamp == 0, receive complete character
+// 4 - not on server - receive empty uuid, send complete character
 func onCharacterNotFound(stream pb.YACS5E_SynchronizeServer, user pb.TUser) error {
-	err := stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{Timestamp: 0}}})
+	err := stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{Uuid: ""}}})
 	if err != nil {
 		return utils.ErrorStatus(err)
 	}
@@ -136,10 +199,11 @@ func onCharacterNotFound(stream pb.YACS5E_SynchronizeServer, user pb.TUser) erro
 		char := tCharacter.Character
 		_, err := db.Exec(
 			"INSERT INTO characters "+
-				"SET uuid=?, users_id=(SELECT id FROM users WHERE login=?), timestamp=?, data=?",
+				"SET uuid=?, users_id=(SELECT id FROM users WHERE login=?), last_sync=?, last_mod=?, data=?",
 			char.Uuid,
-			user,
-			char.Timestamp,
+			user.Login,
+			char.LastSync,
+			char.LastMod,
 			char.Blob,
 		)
 		if err == sql.ErrNoRows {
@@ -148,6 +212,7 @@ func onCharacterNotFound(stream pb.YACS5E_SynchronizeServer, user pb.TUser) erro
 		} else if err != nil {
 			return utils.ErrorStatus(err)
 		}
+		log.Println("Synchronize: New character uuid:", char.Uuid)
 	}
 
 	return nil

@@ -23,9 +23,10 @@ message TUser {
 
 message TCharacter {
     string uuid = 1;
-    uint64 timestamp = 2;
-    bytes blob = 3;
-    bool delete = 4;    
+    uint64 last_sync = 2;
+    uint64 last_mod = 3;
+    bytes blob = 4;
+    bool delete = 5;
 }
 
 message TTalk {
