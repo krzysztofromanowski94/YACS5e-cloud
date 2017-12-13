@@ -62,16 +62,6 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 		uuidSlice = append(uuidSlice, uuid)
 	}
 
-	uuidSlice = append(uuidSlice, "asd")
-
-	log.Println("This user has theese characters on server dv:")
-	log.Println(uuidSlice)
-
-	uuidSlice = utils.RemoveFromSlice(uuidSlice, "asd")
-
-	log.Println("After remove:")
-	log.Println(uuidSlice)
-
 	// 2b. Perform char sync one-by-one
 
 	log.Println("Synchronize: Perform char sync one-by-one")
@@ -111,6 +101,8 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 			} else if err != nil {
 				return utils.ErrorStatus(err)
 			}
+
+			uuidSlice = utils.RemoveFromSlice(uuidSlice, uuid)
 
 			err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{Uuid: uuid, LastSync: lastSync, LastMod: lastMod}}})
 			if err != nil {
@@ -160,7 +152,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 				}
 			}
 
-			log.Println("Synchronize: Unimplemented...")
+			log.Println("Synchronize: Unimplemented route...")
 			log.Println(streamIn)
 			log.Println(lastSync, lastMod)
 
@@ -175,7 +167,54 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 
 	}
 
-	return status.Errorf(0, "")
+	if len(uuidSlice) > 0 {
+		log.Println("Synchronize: more characters on db")
+		err := stream.Send(&pb.TTalk{Union: &pb.TTalk_Good{Good: true}})
+		if err != nil {
+			return utils.ErrorStatus(err)
+		}
+	} else {
+		log.Println("Synchronize: no characters on db")
+		err := stream.Send(&pb.TTalk{Union: &pb.TTalk_Good{Good: false}})
+		if err != nil {
+			return utils.ErrorStatus(err)
+		}
+	}
+
+	for _, uuid := range uuidSlice {
+		var (
+			lastSync uint64
+			lastMod  uint64
+			data     []byte
+		)
+
+		err := db.QueryRow(
+			"SELECT last_sync, last_mod, data FROM characters WHERE users_id=(SELECT id FROM users WHERE login=?) AND uuid=? LIMIT 1",
+			user.Login,
+			uuid,
+		).Scan(&lastSync, &lastMod, &data)
+		if err != nil {
+			return utils.ErrorStatus(err)
+		}
+
+		err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{
+			Uuid:     uuid,
+			LastSync: lastSync,
+			LastMod:  lastMod,
+			Blob:     data,
+		}}})
+		if err != nil {
+			return utils.ErrorStatus(err)
+		}
+	}
+
+	err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Good{Good: true}})
+	if err != nil {
+		return utils.ErrorStatus(err)
+	}
+	log.Println("Synchronize: Complete")
+
+	return status.Errorf(0, "Complete")
 }
 
 func onCharacterFound(stream pb.YACS5E_SynchronizeServer) {
