@@ -115,6 +115,15 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 				break
 			}
 
+			if ttalk.Character.Delete {
+				log.Println("Synchronize: Character is to be deleted (5)", uuid, ttalk.Character.Uuid)
+				_, err := db.Exec("DELETE FROM characters WHERE uuid=?", uuid)
+				if err != nil {
+					return utils.ErrorStatus(err)
+				}
+				break
+			}
+
 			// if not even - app wants to send data
 			streamIn, err = stream.Recv()
 			if err != nil {
