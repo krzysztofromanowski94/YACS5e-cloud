@@ -32,10 +32,15 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 	user, err = partialLogin(streamIn)
 	if err != nil {
 		log.Println("Synchronize: Error logging user:", err)
+		logErr := stream.Send(&pb.TTalk{Union: &pb.TTalk_Good{Good: false}})
+		if logErr != nil {
+			utils.ErrorStatus(logErr)
+		}
+
 		return err
 	}
 
-	log.Println("Synchronize: Logged user", user.Login)
+	log.Println("Synchronize for user", user.Login)
 
 	err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Good{Good: true}})
 	if err != nil {
@@ -68,6 +73,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 
 	exchangeCharInfo := true
 	for exchangeCharInfo {
+		log.Println("Loooop...")
 
 		// get login, uuid
 		streamIn, err := stream.Recv()
@@ -85,6 +91,16 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 				data     []byte
 			)
 
+			// character is to be deleted
+			if ttalk.Character.Delete {
+				log.Println("Synchronize: (5) Character is to be deleted", uuid)
+				_, err := db.Exec("DELETE FROM characters WHERE uuid=?", ttalk.Character.Uuid)
+				if err != nil {
+					return utils.ErrorStatus(err)
+				}
+				continue
+			}
+
 			log.Println("Synchronize: Trying to get data for user", user.Login, ttalk.Character.Uuid)
 
 			err := db.QueryRow(
@@ -94,7 +110,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 			).Scan(&uuid, &lastSync, &lastMod, &data)
 
 			if err == sql.ErrNoRows {
-				log.Println("Synchronize: character not found on server, ask for complete data")
+				log.Println("Synchronize: (4) character not found on server, ask for complete data")
 				// 4 - not on server - receive empty uuid, send complete character
 				onCharacterNotFound(stream, *user)
 				break
@@ -109,19 +125,11 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 				return utils.ErrorStatus(err)
 			}
 
+
 			// Character is even
 			if lastSync == ttalk.Character.GetLastSync() && lastMod == ttalk.Character.GetLastMod() {
-				log.Println("Synchronize: Character is even (0)", uuid, lastSync, data)
-				break
-			}
-
-			if ttalk.Character.Delete {
-				log.Println("Synchronize: Character is to be deleted (5)", uuid, ttalk.Character.Uuid)
-				_, err := db.Exec("DELETE FROM characters WHERE uuid=?", uuid)
-				if err != nil {
-					return utils.ErrorStatus(err)
-				}
-				break
+				log.Println("Synchronize: (0) Character is even", uuid)
+				continue
 			}
 
 			// if not even - app wants to send data
@@ -224,10 +232,6 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 	log.Println("Synchronize: Complete")
 
 	return status.Errorf(0, "Complete")
-}
-
-func onCharacterFound(stream pb.YACS5E_SynchronizeServer) {
-
 }
 
 // 4 - not on server - receive empty uuid, send complete character
