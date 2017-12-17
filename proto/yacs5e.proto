@@ -25,7 +25,7 @@ message TCharacter {
     string uuid = 1;
     uint64 last_sync = 2;
     uint64 last_mod = 3;
-    bytes blob = 4;
+    string blob = 4;
     bool delete = 5;
 }
 

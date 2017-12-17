@@ -88,7 +88,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 				uuid     string
 				lastSync uint64
 				lastMod  uint64
-				data     []byte
+				data     string
 			)
 
 			// character is to be deleted
@@ -202,7 +202,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 		var (
 			lastSync uint64
 			lastMod  uint64
-			data     []byte
+			data     string
 		)
 
 		err := db.QueryRow(
