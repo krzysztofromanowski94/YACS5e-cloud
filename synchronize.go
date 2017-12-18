@@ -73,7 +73,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 
 	exchangeCharInfo := true
 	for exchangeCharInfo {
-		log.Println("Loooop...")
+		log.Println("Loop...")
 
 		// get login, uuid
 		streamIn, err := stream.Recv()
@@ -125,7 +125,6 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 				return utils.ErrorStatus(err)
 			}
 
-
 			// Character is even
 			if lastSync == ttalk.Character.GetLastSync() && lastMod == ttalk.Character.GetLastMod() {
 				log.Println("Synchronize: (0) Character is even", uuid)
@@ -170,7 +169,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 			}
 
 			log.Println("Synchronize: Unimplemented route...")
-			log.Println(streamIn)
+			log.Println(streamIn.Union)
 			log.Println(lastSync, lastMod)
 
 		case *pb.TTalk_Good:
