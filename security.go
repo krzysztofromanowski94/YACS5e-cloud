@@ -13,12 +13,15 @@ import (
 )
 
 func partialLogin(tTalk *pb.TTalk) (user *pb.TUser, err error) {
+
+	// Here should be checking if recaptcha is right
+
 	switch tUnion := tTalk.Union.(type) {
 
 	case *pb.TTalk_User:
 
 		if tUnion.User.Login == "" || tUnion.User.Password == ""{
-			log.Println("partialLogin: user login is null")
+			log.Println("partialLogin: user login or passwd is null")
 		}
 
 		hashedPasswd := blake2b.Sum512([]byte(tUnion.User.Password))
@@ -36,10 +39,10 @@ func partialLogin(tTalk *pb.TTalk) (user *pb.TUser, err error) {
 		return tUnion.User, nil
 
 	default:
-		return nil, status.Errorf(53, "EXPECTED TYPE IS TTalk_User")
+		return nil, status.Errorf(53, "Unexpected type")
 	}
 
-	return nil, status.Errorf(2, "UNEXPECTED RETURN AT PARTIAL LOGIN")
+	return nil, status.Errorf(2, "Unexpected return at partial login")
 }
 
 func (server *YACS5eServer) Registration(ctx context.Context, user *pb.TUser) (*pb.Empty, error) {
@@ -89,7 +92,7 @@ func (server *YACS5eServer) Login(ctx context.Context, user *pb.TUser) (*pb.Empt
 
 	if err != nil {
 		utils.LogUnknownError(err)
-		return &pb.Empty{}, status.Errorf(110, "UNKNOWN ERROR")
+		return &pb.Empty{}, status.Errorf(110, "Unknown error")
 	}
 
 	for row.Next() {
@@ -101,8 +104,7 @@ func (server *YACS5eServer) Login(ctx context.Context, user *pb.TUser) (*pb.Empt
 		err := row.Scan(&login, &visibleName)
 		if err != nil {
 			utils.LogUnknownError(err)
-			returnStr := fmt.Sprint("UNKNOWN ERROR: ", err)
-			return &pb.Empty{}, status.Errorf(110, returnStr)
+			return &pb.Empty{}, status.Errorf(110, "Unknown error")
 		}
 
 		log.Println("User logged in")

@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 
 	pb "github.com/krzysztofromanowski94/YACS5e-cloud/proto"
@@ -23,8 +22,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 	streamIn, err := stream.Recv()
 	if err != nil {
 		utils.LogUnknownError(err)
-		returnStr := fmt.Sprint("Synchronize: ERROR GETTING DATA FROM INPUT STREAM: ", err)
-		return status.Errorf(54, returnStr)
+		return status.Errorf(54, "Error getting data from input stream")
 	}
 
 	// 1. Check credentials
@@ -45,8 +43,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 	err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Good{Good: true}})
 	if err != nil {
 		utils.LogUnknownError(err)
-		returnStr := fmt.Sprint("Synchronize: ERROR SENDING DATA FROM INPUT STREAM: ", err)
-		return status.Errorf(55, returnStr)
+		return status.Errorf(55, "Error sending data to input stream")
 	}
 
 	// 2a. Create slice of uuids'. If after app-sync there will be any left, app does not have them.
@@ -100,8 +97,6 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 				}
 				continue
 			}
-
-			log.Println("Synchronize: Trying to get data for user", user.Login, ttalk.Character.Uuid)
 
 			err := db.QueryRow(
 				"SELECT uuid, last_sync, last_mod, data FROM characters WHERE users_id=(SELECT id FROM users WHERE login=?) AND uuid=? LIMIT 1",
@@ -169,8 +164,6 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 			}
 
 			log.Println("Synchronize: Unimplemented route...")
-			log.Println(streamIn.Union)
-			log.Println(lastSync, lastMod)
 
 		case *pb.TTalk_Good:
 			log.Println("Synchronize: no more characters on client")
@@ -178,7 +171,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 			continue
 
 		default:
-			return status.Errorf(125, "Expected type TTalk_Character")
+			return status.Errorf(125, "Unexpected type")
 		}
 
 	}
@@ -259,7 +252,7 @@ func onCharacterNotFound(stream pb.YACS5E_SynchronizeServer, user pb.TUser) erro
 		)
 		if err == sql.ErrNoRows {
 			log.Println("Synchronize: internar error:", err)
-			return status.Errorf(2, "Insert new character to db internal error")
+			return status.Errorf(2, "Unexpected error")
 		} else if err != nil {
 			return utils.ErrorStatus(err)
 		}
