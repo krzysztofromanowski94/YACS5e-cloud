@@ -10,27 +10,24 @@ import (
 )
 
 var (
-	tls, parseErr = strconv.ParseBool("{{ use_tls }}")
+	useTls        bool
 	tlsCertFile   = "{{ tls_cert_file }}"
 	tlsKeyFile    = "{{ tls_key_file }}"
 	serverAddress = ":{{ server_port }}"
 	serverOpts    []grpc.ServerOption
 
-	exitProgramChannel chan bool = make(chan bool, 1)
+	exitProgramChannel = make(chan bool, 1)
 )
 
 func main() {
 	log.Println("Server starting...")
 
-	if parseErr != nil {
-		log.Fatal("Error parsing use_tls ansible variable. ERROR:", parseErr)
-	}
 	lis, err := net.Listen("tcp", serverAddress)
 	if err != nil {
 		log.Fatal("Failed to create listen service. ERROR: ", err)
 	}
 
-	if tls {
+	if useTls {
 		cred, err := credentials.NewServerTLSFromFile(tlsCertFile, tlsKeyFile)
 		if err != nil {
 			log.Fatal("Failed to generate credentials. ERROR: ", err)
@@ -48,4 +45,15 @@ func main() {
 
 	<-exitProgramChannel
 	return
+}
+
+func init() {
+	var (
+		err error
+	)
+	useTls, err = strconv.ParseBool("{{ use_tls }}")
+	if err != nil {
+		log.Fatal("Error parsing use_tls ansible variable. ERROR:", err)
+	}
+
 }
