@@ -3,9 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
-
-	pb "github.com/krzysztofromanowski94/YACS5e-cloud/proto"
-	"github.com/krzysztofromanowski94/YACS5e-cloud/utils"
+	pb "github.com/WeDoThingsPTP/YACS5eproto"
 	"google.golang.org/grpc/status"
 )
 
@@ -21,7 +19,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 
 	streamIn, err := stream.Recv()
 	if err != nil {
-		utils.LogUnknownError(err)
+		LogUnknownError(err)
 		return status.Errorf(54, "Error getting data from input stream")
 	}
 
@@ -32,7 +30,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 		log.Println("Synchronize: Error logging user:", err)
 		logErr := stream.Send(&pb.TTalk{Union: &pb.TTalk_Good{Good: false}})
 		if logErr != nil {
-			utils.ErrorStatus(logErr)
+			ErrorStatus(logErr)
 		}
 
 		return err
@@ -42,14 +40,14 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 
 	err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Good{Good: true}})
 	if err != nil {
-		utils.LogUnknownError(err)
+		LogUnknownError(err)
 		return status.Errorf(55, "Error sending data to input stream")
 	}
 
 	// 2a. Create slice of uuids'. If after app-sync there will be any left, app does not have them.
 	uuidQuery, err := db.Query("SELECT uuid FROM characters WHERE users_id=(SELECT id FROM users WHERE login=?)", user.Login)
 	if err != nil {
-		utils.ErrorStatus(err)
+		ErrorStatus(err)
 	}
 
 	uuidSlice := make([]string, 0)
@@ -58,7 +56,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 
 		err := uuidQuery.Scan(&uuid)
 		if err != nil {
-			utils.ErrorStatus(err)
+			ErrorStatus(err)
 		}
 
 		uuidSlice = append(uuidSlice, uuid)
@@ -75,7 +73,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 		// get login, uuid
 		streamIn, err := stream.Recv()
 		if err != nil {
-			return utils.ErrorStatus(err)
+			return ErrorStatus(err)
 		}
 
 		switch ttalk := streamIn.Union.(type) {
@@ -93,7 +91,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 				log.Println("Synchronize: (5) Character is to be deleted", uuid)
 				_, err := db.Exec("DELETE FROM characters WHERE uuid=?", ttalk.Character.Uuid)
 				if err != nil {
-					return utils.ErrorStatus(err)
+					return ErrorStatus(err)
 				}
 				continue
 			}
@@ -110,14 +108,14 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 				onCharacterNotFound(stream, *user)
 				break
 			} else if err != nil {
-				return utils.ErrorStatus(err)
+				return ErrorStatus(err)
 			}
 
-			uuidSlice = utils.RemoveFromSlice(uuidSlice, uuid)
+			uuidSlice = RemoveFromSlice(uuidSlice, uuid)
 
 			err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{Uuid: uuid, LastSync: lastSync, LastMod: lastMod}}})
 			if err != nil {
-				return utils.ErrorStatus(err)
+				return ErrorStatus(err)
 			}
 
 			// Character is even
@@ -129,7 +127,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 			// if not even - app wants to send data
 			streamIn, err = stream.Recv()
 			if err != nil {
-				return utils.ErrorStatus(err)
+				return ErrorStatus(err)
 			}
 			switch ttalk := streamIn.Union.(type) {
 			case *pb.TTalk_Character:
@@ -144,7 +142,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 						tChar.Uuid, user.Login, tChar.LastSync, tChar.LastMod, tChar.Blob, tChar.LastSync, tChar.LastMod, tChar.Blob)
 
 					if err != nil {
-						return utils.ErrorStatus(err)
+						return ErrorStatus(err)
 					}
 					continue
 
@@ -157,7 +155,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 						Blob:     data,
 					}}})
 					if err != nil {
-						return utils.ErrorStatus(err)
+						return ErrorStatus(err)
 					}
 					continue
 				}
@@ -180,13 +178,13 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 		log.Println("Synchronize: more characters on db")
 		err := stream.Send(&pb.TTalk{Union: &pb.TTalk_Good{Good: true}})
 		if err != nil {
-			return utils.ErrorStatus(err)
+			return ErrorStatus(err)
 		}
 	} else {
 		log.Println("Synchronize: no characters on db")
 		err := stream.Send(&pb.TTalk{Union: &pb.TTalk_Good{Good: false}})
 		if err != nil {
-			return utils.ErrorStatus(err)
+			return ErrorStatus(err)
 		}
 	}
 
@@ -203,7 +201,7 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 			uuid,
 		).Scan(&lastSync, &lastMod, &data)
 		if err != nil {
-			return utils.ErrorStatus(err)
+			return ErrorStatus(err)
 		}
 
 		err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{
@@ -213,13 +211,13 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 			Blob:     data,
 		}}})
 		if err != nil {
-			return utils.ErrorStatus(err)
+			return ErrorStatus(err)
 		}
 	}
 
 	err = stream.Send(&pb.TTalk{Union: &pb.TTalk_Good{Good: true}})
 	if err != nil {
-		return utils.ErrorStatus(err)
+		return ErrorStatus(err)
 	}
 	log.Println("Synchronize: Complete")
 
@@ -230,12 +228,12 @@ func (server *YACS5eServer) Synchronize(stream pb.YACS5E_SynchronizeServer) erro
 func onCharacterNotFound(stream pb.YACS5E_SynchronizeServer, user pb.TUser) error {
 	err := stream.Send(&pb.TTalk{Union: &pb.TTalk_Character{Character: &pb.TCharacter{Uuid: ""}}})
 	if err != nil {
-		return utils.ErrorStatus(err)
+		return ErrorStatus(err)
 	}
 
 	streamIn, err := stream.Recv()
 	if err != nil {
-		return utils.ErrorStatus(err)
+		return ErrorStatus(err)
 	}
 
 	switch tCharacter := streamIn.Union.(type) {
@@ -254,7 +252,7 @@ func onCharacterNotFound(stream pb.YACS5E_SynchronizeServer, user pb.TUser) erro
 			log.Println("Synchronize: internar error:", err)
 			return status.Errorf(2, "Unexpected error")
 		} else if err != nil {
-			return utils.ErrorStatus(err)
+			return ErrorStatus(err)
 		}
 		log.Println("Synchronize: New character uuid:", char.Uuid)
 	}
