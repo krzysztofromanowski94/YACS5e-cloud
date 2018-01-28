@@ -3,11 +3,13 @@
 - hosts: localhost
   vars_files:
     - secret/startup.vars.yml
+  vars:
+    - repository_dir: "/go/src/{{ repository }}"
 
   tasks:
     - name: get repository
       git:
-        repo: "{{ repository_url }}"
+        repo: "https://{{ repository }}.git"
         dest: "{{ repository_dir }}"
         version: "{{ repository_version }}"
         update: yes

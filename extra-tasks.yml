@@ -8,6 +8,11 @@
   args:
       chdir: "{{ repository_dir }}"
 
+- name: make sure symlink does not exist yet
+  file:
+    path: "/go/bin/server"
+    state: absent
+
 - name: create symlink
   file:
     src: "/go/bin/YACS5e-cloud"
