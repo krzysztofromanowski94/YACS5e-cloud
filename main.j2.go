@@ -1,7 +1,7 @@
 package main
 
 import (
-	pb "github.com/krzysztofromanowski94/YACS5e-cloud/proto"
+	pb "github.com/WeDoThingsPTP/YACS5eproto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"log"

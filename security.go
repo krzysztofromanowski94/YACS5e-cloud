@@ -1,13 +1,12 @@
 package main
 
 import (
-	"github.com/krzysztofromanowski94/YACS5e-cloud/utils"
 	"google.golang.org/grpc/status"
 
 	"context"
 	"database/sql"
 	"fmt"
-	pb "github.com/krzysztofromanowski94/YACS5e-cloud/proto"
+	pb "github.com/WeDoThingsPTP/YACS5eproto"
 	"golang.org/x/crypto/blake2b"
 	"log"
 )
@@ -33,7 +32,7 @@ func partialLogin(tTalk *pb.TTalk) (user *pb.TUser, err error) {
 		).Scan(&tUnion.User.Id)
 
 		if err != nil {
-			return nil, utils.ErrorStatus(err)
+			return nil, ErrorStatus(err)
 		}
 
 		return tUnion.User, nil
@@ -67,7 +66,7 @@ func (server *YACS5eServer) Registration(ctx context.Context, user *pb.TUser) (*
 			return &pb.Empty{}, status.Errorf(103, returnStr)
 
 		default:
-			utils.LogUnknownError(err)
+			LogUnknownError(err)
 			return &pb.Empty{}, status.Errorf(100, "Unknown error")
 		}
 	}
@@ -91,7 +90,7 @@ func (server *YACS5eServer) Login(ctx context.Context, user *pb.TUser) (*pb.Empt
 		)
 
 	if err != nil {
-		utils.LogUnknownError(err)
+		LogUnknownError(err)
 		return &pb.Empty{}, status.Errorf(110, "Unknown error")
 	}
 
@@ -103,7 +102,7 @@ func (server *YACS5eServer) Login(ctx context.Context, user *pb.TUser) (*pb.Empt
 
 		err := row.Scan(&login, &visibleName)
 		if err != nil {
-			utils.LogUnknownError(err)
+			LogUnknownError(err)
 			return &pb.Empty{}, status.Errorf(110, "Unknown error")
 		}
 
